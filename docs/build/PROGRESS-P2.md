@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 09:05 · **Now working on:** Phase 4 (P2-23 record a replay next) · **Branch:** main
+**Last updated:** Sat 13:40 · **Now working on:** Phase 4 (P2-24 Devpost draft next) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -32,7 +32,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-20 | Classmates | ⬜ | | |
 | P2-21 | Peri + domain | ⬜ | | |
 | P2-22 | Offline mode | ✅ | 4401929 | OFFLINE=1: memory store seeded from data/replay/seed.json (worksheet + "replay" alias); unrecorded photo → recorded scan (labelled); coach reuses the recorded decision for the same answer, code-checked, else fallback. 17 checks + OFFLINE build/start. Wi-Fi-off run is P2-23 |
-| P2-23 | Record a replay | ⬜ | | |
+| P2-23 | Record a replay | 🟦 | afb0a2a | scripts/export-replay.ts <CLASS> → data/replay/aiCalls.json + seed.json; 14 round-trip checks (live run → export → offline coach follows it). Still to do: play one demo in live mode, export, Wi-Fi-off test (needs Atlas network access fixed) |
 | P2-24 | Backup video + Devpost draft | ⬜ | | |
 | P2-25 | Ship | ⬜ | | |
 
