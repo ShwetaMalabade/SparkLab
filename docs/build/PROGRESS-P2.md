@@ -16,7 +16,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-04 | Contracts + fixture + mocks | ✅ | 5407174 | api.ts + types.ts exactly as CONTRACTS §2, mock mode; fixture q1 launcher · q2 balloons · q3 mix lab · q4 balancer; speak.ts; results stub |
 | P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Waiting on Dharm: AI Studio keys + model names + real RPM/RPD, Atlas cluster, Vercel project + env vars |
 | P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
-| P2-07 | Database | ⬜ | | |
+| P2-07 | Database | ✅ | 0809611 | db.ts (Mongo, cached client, indexes) + memoryDb.ts (OFFLINE=1), same Store interface; classCode.ts. 32 checks vs local Mongo + memory. aggregateClass comes with P2-15 |
 | P2-08 | Agents 1 + 2 | ⬜ | | |
 | P2-09 | Scan pipeline + `/api/ingest` | ⬜ | | |
 | P2-10 | Core routes | ⬜ | | |
