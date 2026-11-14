@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 03:20 · **Now working on:** P2-13 · **Branch:** main
+**Last updated:** Sat 03:20 · **Now working on:** P2-14 · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -22,7 +22,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-10 | Core routes | ✅ | 6d147bd | class, session, session/[id]/end, attempt, worksheet/[id] GET+PATCH (code-only re-check from saved drafts). 32 HTTP checks on Mongo |
 | P2-11 | Landing + Scan pages | ✅ | e981eee | Landing: class on load, QR → /live/<code>, budget picker, Use last scan. Scan: drop/webcam/phone, live steps ≥ 0.6 s, → /play/<wsId>. Checked in Chrome |
 | P2-12 | Coach `/api/next` | 🟦 | ae7ad55 | Code done: coach.ts + route; 22 scripted-coach checks + HTTP on Mongo (fallback ~130 ms). Still to do: try the Director prompt on a real model (needs key) |
-| P2-13 | Real `nextStep` in `api.ts` | ⬜ | | |
+| P2-13 | Real `nextStep` in `api.ts` | ✅ | f157cd0 | All api.ts calls have a live path (NEXT_PUBLIC_MOCK=0); nextStep 6 s abort → browser fallback; postAttempt queue + 5 s retry. 19 live checks |
 | P2-14 | Review page | ⬜ | | |
 | P2-15 | Class stats `GET /api/class/[code]` | ⬜ | | |
 | P2-16 | Live phone page `/live/[code]` | ⬜ | | |
@@ -48,6 +48,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Live mode is ready, still off by default.** `NEXT_PUBLIC_MOCK=0` (at build time) switches api.ts to the real routes. Signatures unchanged. `/play/fixture` still loads the fixture in live mode; a real scan's `/play/<wsId>` loads from the server. We flip it at Merge 1.
 - **Merged your p1/P1-11 into main** (Dharm asked), plus a lint ignore for `public/mediapipe-wasm/**` (MediaPipe's generated JS caused 532 lint problems). Your bundle concern: checked the real Next build, and mathjs is in **no** client chunk.
 - **/api/next skip handling:** the server remembers the last question it served; a call with no attempt after it marks that question skipped, so it won't be offered again.
 - **Coach variants** live on the session (`session.variants`), not in `worksheet.questions`, so `getWorksheet()` never includes them; they only arrive through `nextStep()`.
