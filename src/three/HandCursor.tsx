@@ -3,7 +3,7 @@
 // Updated outside React renders (transient subscription) so 30 fps cursor motion doesn't re-render the tree.
 import { useEffect, useRef } from "react";
 import { useGame } from "@/game/store";
-import type { Cursor, Side } from "@/motion/types";
+import type { Cursor, HandState, Side } from "@/motion/types";
 
 const R = 22; // ring radius, px
 const CIRC = 2 * Math.PI * R;
@@ -20,17 +20,25 @@ export function HandCursors({ accent = "#22d3ee" }: { accent?: string }) {
 function HandCursor({ side, accent }: { side: Side; accent: string }) {
   const el = useRef<HTMLDivElement>(null);
   const ring = useRef<SVGCircleElement>(null);
+  const dot = useRef<SVGCircleElement>(null);
+  const icon = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const apply = (c: Cursor) => {
+    const apply = (c: Cursor, h: HandState) => {
       const node = el.current;
       if (!node) return;
       node.style.opacity = c.visible ? "1" : "0";
       node.style.transform = `translate(${c.x - R - 4}px, ${c.y - R - 4}px)`;
       if (ring.current) ring.current.style.strokeDashoffset = String(CIRC * (1 - c.dwell));
+      // Finger tracker: show the hand shape (✋ open = safe, ☝️ point = hold to choose, ✊ fist = grab / select).
+      const live = performance.now() - h.seen < 400;
+      const shape = live ? h.shape : "other";
+      if (icon.current) icon.current.textContent = shape === "fist" ? "✊" : shape === "point" ? "☝️" : shape === "open" ? "✋" : "";
+      if (dot.current) dot.current.setAttribute("r", shape === "fist" ? "13" : "8");
     };
-    apply(useGame.getState().cursors[side]);
-    return useGame.subscribe((s) => apply(s.cursors[side]));
+    const st = useGame.getState();
+    apply(st.cursors[side], st.hands[side]);
+    return useGame.subscribe((s) => apply(s.cursors[side], s.hands[side]));
   }, [side]);
 
   return (
@@ -50,11 +58,12 @@ function HandCursor({ side, accent }: { side: Side; accent: string }) {
           strokeDashoffset={CIRC}
           transform={`rotate(-90 ${R + 4} ${R + 4})`}
         />
-        <circle cx={R + 4} cy={R + 4} r={8} fill={accent} opacity={0.9} />
+        <circle ref={dot} cx={R + 4} cy={R + 4} r={8} fill={accent} opacity={0.9} />
         <text x={R + 4} y={R + 8} textAnchor="middle" fontSize={10} fontWeight={700} fill="#0b1020">
           {side === "left" ? "L" : "R"}
         </text>
       </svg>
+      <span ref={icon} className="absolute -right-5 -top-3 text-2xl drop-shadow" aria-hidden />
     </div>
   );
 }

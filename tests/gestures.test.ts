@@ -7,6 +7,7 @@ import { keyToEvent } from "../src/motion/keyboard";
 import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { classifyHand } from "../src/motion/hands";
 import { reportFps, useQuality, particles } from "../src/three/quality";
 import { checkClip, packFrame, replayClip, type Clip } from "../src/motion/clips";
 import { judge, speciesOf, trapped, atomCounts, trapFormula } from "../src/game/balancer";
@@ -254,6 +255,34 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
   ok("quality: keeps stepping to 3 at most", useQuality.getState().level === 3);
   feed(60, 10);
   ok("quality: never steps back up", useQuality.getState().level === 3);
+}
+
+// ---- Finger tracker shapes (open / point / fist + tilt) on synthetic 21-point hands ----
+{
+  // Palm up the screen: wrist at (0,0), knuckles at y = −1. Each finger: knuckle, pip, dip, tip.
+  const hand = (ext: [boolean, boolean, boolean, boolean], rot = 0) => {
+    const pts: { x: number; y: number; z: number }[] = Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 }));
+    const put = (i: number, x: number, y: number) => {
+      const c = Math.cos(rot), sn = Math.sin(rot);
+      pts[i] = { x: x * c - y * sn, y: x * sn + y * c, z: 0 };
+    };
+    put(0, 0, 0);
+    put(1, -0.35, -0.2); put(2, -0.55, -0.45); put(3, -0.65, -0.65); put(4, -0.7, -0.8); // thumb
+    [-0.3, -0.1, 0.1, 0.3].forEach((x, f) => {
+      const k = 5 + f * 4;
+      put(k, x, -1);
+      if (ext[f]) { put(k + 1, x, -1.4); put(k + 2, x, -1.7); put(k + 3, x, -1.95); }
+      else { put(k + 1, x, -1.25); put(k + 2, x, -1.0); put(k + 3, x, -0.75); } // curled back toward the palm
+    });
+    return pts;
+  };
+  ok("hand: open palm → open", classifyHand(hand([true, true, true, true])).shape === "open");
+  ok("hand: closed fist → fist", classifyHand(hand([false, false, false, false])).shape === "fist", classifyHand(hand([false, false, false, false])).shape);
+  ok("hand: index only → point", classifyHand(hand([true, false, false, false])).shape === "point");
+  ok("hand: two fingers → not a select shape", classifyHand(hand([true, true, false, false])).shape === "other");
+  const flat = classifyHand(hand([false, false, false, false])).tilt;
+  const tipped = classifyHand(hand([false, false, false, false], 0.8)).tilt;
+  ok("hand: tilting the fist changes tilt by ~46°", Math.abs(Math.abs(tipped - flat) - 45.8) < 2, `${flat} → ${tipped}`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

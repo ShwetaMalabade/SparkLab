@@ -5,7 +5,7 @@ import { emit, useGame } from "@/game/store";
 import type { RawLandmark } from "./pose";
 import { ema, PointSmoother } from "./smoothing";
 import { hitTest, HOVER_MIN_MS } from "./targets";
-import type { AimMode, Baseline, Cursor, GestureEvent, MotionFrame, Px, Side } from "./types";
+import type { AimMode, Baseline, Cursor, GestureEvent, HandShape, MotionFrame, Px, Side } from "./types";
 
 // Landmark ids (04 §3). Left/right = the person's own.
 export const NOSE = 0, L_SH = 11, R_SH = 12, L_EL = 13, R_EL = 14, L_WR = 15, R_WR = 16;
@@ -59,6 +59,7 @@ export class GestureEngine {
   private frameListeners = new Set<(f: MotionFrame) => void>();
   private rawListeners = new Set<(raw: RawLandmark[] | null, t: number, vw: number, vh: number, sw: number, sh: number) => void>();
   private hover: Record<Side, HoverState> = { left: freshHover(), right: freshHover() };
+  private lastShape: Record<Side, HandShape> = { left: "other", right: "other" };
   private bothUpCount = 0;
   private bothUpLatched = false;
   private bothUpLast = -Infinity;
@@ -275,7 +276,28 @@ export class GestureEngine {
       st.enterT = t;
       st.hoverStart = t;
     }
+    // Finger tracker live for this hand: an open hand never selects (resting is safe), a fist CLOSING on a target
+    // selects at once (sliding an already-closed fist onto it does not), pointing fills the ring.
+    // Without the finger tracker (failed to load / no hand seen) the plain dwell below runs.
+    const hand = useGame.getState().hands[side];
+    const live = t - hand.seen < 400;
+    const wasFist = this.lastShape[side] === "fist";
+    this.lastShape[side] = live ? hand.shape : "other";
     if (!id || !dwellArmed || t < st.cooldownUntil) return 0;
+    if (live) {
+      if (hand.shape === "fist") {
+        if (wasFist) return 1; // still holding: no repeat
+        this.emitHover(side, id, t - st.hoverStart, t);
+        this.fire({ type: "dwell", side, targetId: id, t, source: "gesture" });
+        st.cooldownUntil = t + T.dwellCooldownMs;
+        st.enterT = st.cooldownUntil;
+        return 1;
+      }
+      if (hand.shape !== "point") {
+        st.enterT = t; // open / unknown: the ring never fills
+        return 0;
+      }
+    }
     const progress = (t - st.enterT) / T.dwellMs;
     if (progress >= 1) {
       this.emitHover(side, id, t - st.hoverStart, t); // "on leave or select"

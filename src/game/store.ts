@@ -2,15 +2,16 @@
 import { create } from "zustand";
 import type { NextStep } from "@/lib/client/api";
 import type { TQuestion } from "@/lib/schema";
-import type { CommandEvent, Cursor, GestureEvent, GestureType, InputSource, MotionEvent, MotionEventType } from "@/motion/types";
+import type { CommandEvent, Cursor, GestureEvent, GestureType, HandState, InputSource, MotionEvent, MotionEventType, Side } from "@/motion/types";
 
 const hiddenCursor: Cursor = { x: 0, y: 0, visible: false, targetId: null, dwell: 0 };
 
 /** Default arming (04 §6 conflict rules): clap waits for Mix Lab, fire waits for the Launcher. */
 const DEFAULT_ARMED: Record<GestureType, boolean> = {
   hover: true, dwell: true, bothUp: true, lean: true, lost: true, found: true,
-  clap: false, fire: false,
+  clap: false, fire: false, grab: true, release: true,
 };
+const noHand: HandState = { shape: "other", tilt: 0, seen: -1e9 };
 
 type Listener = (e: MotionEvent) => void;
 const listeners = new Map<MotionEventType | "*", Set<Listener>>();
@@ -27,6 +28,9 @@ export type MotionSlice = {
   armed: Record<GestureType, boolean>;
   debug: boolean;
   setCursors: (c: { left: Cursor; right: Cursor }) => void;
+  /** Finger tracker: per-hand shape (open / point / fist) + tilt. `seen` = last detection time (performance.now). */
+  hands: Record<Side, HandState>;
+  setHands: (h: Record<Side, HandState>) => void;
   emit: (e: MotionEvent) => void;
   arm: (type: GestureType, on?: boolean) => void;
   resetArming: () => void;
@@ -112,6 +116,8 @@ export const useGame = create<MotionSlice & GameSlice>()((set, get) => ({
   debug: false,
 
   setCursors: (cursors) => set({ cursors }),
+  hands: { left: noHand, right: noHand },
+  setHands: (hands) => set({ hands }),
 
   emit: (e) => {
     // Disarmed gestures are dropped for every input source, so keyboard C can't mix with one beaker either.

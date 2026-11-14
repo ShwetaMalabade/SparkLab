@@ -4,6 +4,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useGame } from "@/game/store";
 import { engine } from "./gestures";
+import { getHands, handTracker } from "./hands";
+import type { HandLandmarker } from "@mediapipe/tasks-vision";
 import { attachKeyboard } from "./keyboard";
 import { attachCamera, getPose, openCamera, startLoop } from "./pose";
 
@@ -41,9 +43,21 @@ export function MotionProvider({ children, camera = true }: { children: ReactNod
         if (cancelled) return;
         setCam("ready", delegate);
         engine.reset();
-        stopLoop = startLoop(video, landmarker, (pts, t) =>
-          engine.process(pts, t, video.videoWidth || 640, video.videoHeight || 480, window.innerWidth, window.innerHeight),
-        );
+        // Finger tracker (open / point / fist) loads in the background; until then the plain dwell rules run.
+        let hands: HandLandmarker | null = null;
+        getHands().then((h) => void (hands = cancelled ? null : h)).catch(() => {});
+        stopLoop = startLoop(video, landmarker, (pts, t) => {
+          const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+          engine.process(pts, t, vw, vh, window.innerWidth, window.innerHeight);
+          if (!hands) return;
+          try {
+            const res = hands.detectForVideo(video, t + 0.001);
+            const wrist = (i: number) => (pts && pts[i] && pts[i].visibility > 0.5 ? { x: pts[i].x, y: pts[i].y } : null);
+            handTracker.update((res.landmarks ?? []) as { x: number; y: number; z: number }[][], { left: wrist(15), right: wrist(16) }, t);
+          } catch {
+            /* a bad frame never kills the loop */
+          }
+        });
       } catch {
         if (!cancelled) setCam("error");
       }

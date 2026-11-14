@@ -1,7 +1,11 @@
 // src/motion/types.ts: the motion event bus (CONTRACTS §5, docs/plan/04 §6). Shweta-internal.
 // Templates subscribe to these events; they never read landmarks (except the Avatar and the Launcher's θ / power).
 
-export type GestureType = "hover" | "dwell" | "bothUp" | "clap" | "lean" | "fire" | "lost" | "found";
+export type GestureType = "hover" | "dwell" | "bothUp" | "clap" | "lean" | "fire" | "lost" | "found" | "grab" | "release";
+
+/** Hand shape from the finger tracker (src/motion/hands.ts). "other" = unknown / not seen. */
+export type HandShape = "open" | "point" | "fist" | "other";
+export type HandState = { shape: HandShape; tilt: number; seen: number };
 export type InputSource = "gesture" | "keyboard" | "mouse";
 export type Side = "left" | "right";
 
