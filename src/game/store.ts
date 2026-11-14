@@ -1,6 +1,6 @@
 // src/game/store.ts: Zustand store. Motion slice (P1-03): cursors, the event bus, gesture arming.
 import { create } from "zustand";
-import type { Cursor, GestureType, MotionEvent, MotionEventType } from "@/motion/types";
+import type { CommandEvent, Cursor, GestureEvent, GestureType, MotionEvent, MotionEventType } from "@/motion/types";
 
 const hiddenCursor: Cursor = { x: 0, y: 0, visible: false, targetId: null, dwell: 0 };
 
@@ -58,7 +58,7 @@ export const useGame = create<MotionSlice>()((set, get) => ({
 /** Subscribe to one event type (or "*"). Returns the unsubscribe function. */
 export function subscribe<T extends MotionEventType | "*">(
   type: T,
-  fn: (e: T extends "*" ? MotionEvent : Extract<MotionEvent, { type: T }>) => void,
+  fn: (e: T extends "*" ? MotionEvent : T extends "command" ? CommandEvent : GestureEvent) => void,
 ): () => void {
   const set = listeners.get(type) ?? new Set<Listener>();
   listeners.set(type, set);
