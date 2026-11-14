@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 02:45 · **Now working on:** — (P2-05 next, waiting for Dharm's go) · **Branch:** main
+**Last updated:** Sat 03:20 · **Now working on:** — (Phase 1 code done; waiting for Dharm's go. Still by hand: P2-05 accounts, P2-06 outreach, P2-08/09 real-photo test) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -20,7 +20,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-08 | Agents 1 + 2 | 🟦 | 108515b | prompts.ts (verbatim from 03 §4) + reader.ts + designer.ts done. Still to do: test the prompts on 3 real worksheet photos (needs a Gemini key) |
 | P2-09 | Scan pipeline + `/api/ingest` | 🟦 | c340337 | ingest.ts + route + resizeImage done; 25 checks with fake agents + curl. Done-when (printed sheet → flagged worksheet ≤ 25 s) needs a Gemini key |
 | P2-10 | Core routes | ✅ | 6d147bd | class, session, session/[id]/end, attempt, worksheet/[id] GET+PATCH (code-only re-check from saved drafts). 32 HTTP checks on Mongo |
-| P2-11 | Landing + Scan pages | ⬜ | | |
+| P2-11 | Landing + Scan pages | ✅ | e981eee | Landing: class on load, QR → /live/<code>, budget picker, Use last scan. Scan: drop/webcam/phone, live steps ≥ 0.6 s, → /play/<wsId>. Checked in Chrome |
 | P2-12 | Coach `/api/next` | ⬜ | | |
 | P2-13 | Real `nextStep` in `api.ts` | ⬜ | | |
 | P2-14 | Review page | ⬜ | | |
@@ -48,6 +48,8 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Landing → Play hand-off:** Landing stores the class code (`getClassCode()`) and the time budget; `createSession()` picks the budget up automatically if you don't pass one. Scan and "Use last scan" both go to `/play/<wsId>` until the Review page exists (P2-14).
+- **Real routes exist** (`/api/class`, `/api/session`, `/api/session/[id]/end`, `/api/attempt`, `/api/worksheet/[id]`, `/api/ingest`), but `api.ts` still runs the mocks until Merge 1. Nothing changes for you.
 - **Using the mock API:** open `/play/fixture` (any wsId returns the fixture). On every lock-in call `postAttempt(a)` **and** `nextStep({ sessionId, attemptId: null, attempt: a })` together; `nextStep` works out what's played from saved attempts plus the inline one. Both never throw. `source` is always `"fallback"` until the real coach (P2-13).
 - **`/play/[wsId]` with Cache Components:** the dynamic param is runtime data. Read it inside `<Suspense>` (server `page.tsx` wraps a client child that calls `useParams()`), or the build fails. See `src/app/results/[sessionId]/`.
 - **Repo is live: https://github.com/ShwetaMalabade/SparkLab** (`main`). Scaffold + tokens + tested code are in → **P1-01 is unblocked**. **P2-04 is done (5407174) → P1-09 is unblocked** once this is pushed.
