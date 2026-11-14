@@ -2,10 +2,10 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 15:04 · **Now working on:** — (chemistry labs: my side done; waiting for Dharm's go on README/Devpost rewrite) · **Branch:** main
+**Last updated:** Sat 15:50 · **Now working on:** — (labs-only server side done; waiting for Dharm's go: README/Devpost rewrite) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
-- **Chemistry-only pivot (Dharm's call, Sat ~14:00):** 6 chemistry topics; 2 deep labs, **Titration Lab** and **Mystery Sample**. Contract added in ea3f6e9 (additive). Requests R-P2-1 / R-P2-2 below are the new 3D work. Physics templates stay in the code but leave the demo.
+- **Chemistry-only, labs-only (Dharm's call, Sat ~14:00 and ~15:30):** every question is a hands-on lab, **no answer balloons**, clean modern lab look. Labs: Titration, Mystery Sample, Reaction Yield, Mix Lab, Balancer. Spec: `docs/build/LAB-SPEC.md`. Contract additive (ea3f6e9, e4b2099). Requests R-P2-1..3 below.
 
 ## Tasks
 | ID | Task | Status | Commit | Note (1 line) |
@@ -38,18 +38,20 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-26 | Chemistry labs: chemistry code | ✅ | 519404f | Chemistry-only pivot (plan agreed with Dharm). acidBase.ts (titration pH by charge balance, end point, curve, indicator colors) + ions.ts (20 compounds × 5 tests, look-alike distractors). 52 textbook checks |
 | P2-27 | Chemistry labs: contract + assemble | ✅ | ea3f6e9 | Templates titration_lab / mystery_sample; optional titration/mystery on questions, titrationLog/testsUsed on attempts; code cross-checks the AI's titration formula (mole ratio). 66 checks in tests/chem-labs.test.ts |
 | P2-28 | Chemistry labs: prompts + chemistry fixture | ✅ | a0f46fe | Chemistry-only prompts with titration/mystery fields; fixture q1 titration · q2 mystery · q3 mix · q4 balancer · q5 stoichiometry. Real scan of a printed chemistry sheet: 3/3 in 10–14 s, all labs built, key typo 31→30.0 mL flagged. Coach titration variant verified by code (24.0 mL) |
+| P2-29 | Labs only + Reaction Yield Lab + lab spec | ✅ | e4b2099 | No balloons: no-lab questions get one reader repair, then dropped; coach can't serve one. stoich.ts (molar masses, g→mol→ratio→g/mol/mL) + stoich_lab; code writes heavy-metal warnings. Real scan: 5/5 labs in ~11 s. docs/build/LAB-SPEC.md for Shweta (62a6103) |
 
 ## Requests to Shweta
-<!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · what you need · why · which task waits on it -->
-- [ ] R-P2-1 · **Titration Lab template** (`question.template === "titration_lab"`, data in `question.titration`, CONTRACTS §1): burette valve on the left hand (open hand = drip, keys Space/Shift), swirl on the right, live pH meter + curve drawing itself (`phAt` from `@/lib/acidBase`), flask color from `indicatorColor(indicator, pH)` (faint pink that fades → pink → deep magenta on overshoot), burette reading + notebook table; lock-in = the student's answer from the 4 choices; send `titrationLog`. · The chemistry showcase · Merge 3
-- [ ] R-P2-2 · **Mystery Sample template** (`"mystery_sample"`, data in `question.mystery`): bench with 5 tests (wire loop into the Bunsen flame → flame `color`; dropper tests → `Precipitate` with `color`, or `Bubbles` for `effect: "bubbles"`), clue board with each `text`, name the compound from the 4 choices, fewer tests = more stars; send `testsUsed`. Reuse the Mix Lab bench/flask. · Second deep lab · Merge 3
-- **Fixture now has real lab questions (P2-28):** `/play/fixture` q1 = titration_lab (acetic acid 0.150 M × 20.0 mL vs NaOH 0.100 M, end point 30.0 mL, phenolphthalein, end pH 8.76), q2 = mystery_sample (KCl: lilac flame, white AgNO₃). Until your scenes exist they play as answer balloons.
+<!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · **Read `docs/build/LAB-SPEC.md` first** (Dharm's decision: chemistry only, every question a lab, **no answer balloons**, clean modern lab look). Then build the **lab bench + Titration Lab** (§1–3). · The showcase · by ~20:30
+- [ ] R-P2-2 · **Mystery Sample** (LAB-SPEC §4) · second deep lab · by ~23:00 (Merge 3)
+- [ ] R-P2-3 · **Reaction Yield Lab** (§5) + move Mix Lab / Balancer onto the bench (§6) · stoichiometry needs a lab now · before the 3 AM freeze
+- Fixture `/play/fixture` has one question per lab: q1 titration · q2 mystery · q3 mix · q4 balancer · q5 reaction yield (`stoich`).
 
 ## Answered requests (from Shweta)
 <!-- - R-P1-1 → done in <commit> -->
 - (none)
 
 ## Contract changes (schema.ts / api.ts) — additive only
+- **e4b2099 (additive):** Template += `stoich_lab`; `TQuestion.stoich?` (Reaction Yield Lab). The server no longer sends `answer_balloons`.
 - **ea3f6e9 (additive):** Template += `titration_lab`, `mystery_sample`; `TQuestion.titration?` / `TQuestion.mystery?` (optional, nullable); `Attempt.titrationLog?` / `Attempt.testsUsed?` (optional). New importable helpers: `@/lib/acidBase` (`phAt`, `indicatorColor`, `INDICATORS`), `@/lib/ions` (`TESTS`). Details in CONTRACTS §1, §4, §6. Nothing existing changed.
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
