@@ -11,7 +11,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | ID | Task | Status | Commit | Note (1 line) |
 |---|---|---|---|---|
 | P2-01 | Repo + scaffold | ✅ | 4bfdc3a | Next 16.4 + Tailwind v4 (no tailwind.config; tokens go in globals.css @theme). Build + lint green. Not pushed yet (no GitHub remote) |
-| P2-02 | Design tokens + layout | ✅ | HASH | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
+| P2-02 | Design tokens + layout | ✅ | b16219d | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
 | P2-03 | Paste the tested code | ⬜ | | |
 | P2-04 | Contracts + fixture + mocks | ⬜ | | |
 | P2-05 | Accounts + quota | ⬜ | | |
