@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 04:10 · **Now working on:** — (Phase 2 code done; waiting for Dharm's go. Still by hand: keys/accounts/deploy for the real-model and real-phone checks) · **Branch:** main
+**Last updated:** Sat 09:05 · **Now working on:** Phase 3 (P2-20 Classmates waits on Merge 2; P2-21 is Dharm's by hand) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -26,9 +26,9 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-14 | Review page | ✅ | 6bc7a64 | /review/[wsId]: cards, plain-words flags, AI-named mistakes, edit → code recompute (PATCH), remove (PATCH remove:true). Scan + Use last scan now go here. Checked in Chrome |
 | P2-15 | Class stats `GET /api/class/[code]` | ✅ | ed3f5d9 | ClassStats via $facet (Mongo) / JS (memory), first attempt per student per question; coachFeed from decision rows. 15 checks per store + identical output |
 | P2-16 | Live phone page `/live/[code]` | 🟦 | 61cc03a | Polls 2 s, no toasts on first load, toast + vibrate for real answers only (0.8 s locally), grid/mistakes/bars/coach feed. Done-when needs a deploy: real phone on venue Wi-Fi + cellular |
-| P2-17 | Teacher insight | ⬜ | | |
-| P2-18 | Results page | ⬜ | | |
-| P2-19 | TTL indexes | ⬜ | | |
+| P2-17 | Teacher insight | ✅ | 15421cf | insight.ts + POST /api/class/[code]/insights + phone card "✓ numbers checked". numbersAllowed on bullets, nextMove and groups; unknown nicknames dropped; cache 20 s (longer if the class is unchanged). 21 scripted checks. Real-model wording check needs a key |
+| P2-18 | Results page | ✅ | 23aa53c | Score (first answer per question), accuracy by topic, top mistake + why, time played, coach note + its questions, Play again. GET /api/session/[id]/results; mock/offline-network → this device's record. 19 checks + Chrome (mock) |
+| P2-19 | TTL indexes | 🟦 | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"); conflict → warning, not a crash. 6 checks vs a fake Mongo; confirm on Atlas once MONGODB_URI is set |
 | P2-20 | Classmates | ⬜ | | |
 | P2-21 | Peri + domain | ⬜ | | |
 | P2-22 | Offline mode | ⬜ | | |
@@ -48,6 +48,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Results page is real (P2-18).** Keep navigating to `/results/<sessionId>` after `endSession()`; it reads the server in live mode and this device's record in mock mode. "Play again" goes to `/play/<the wsId you played>`.
 - **Live mode is ready, still off by default.** `NEXT_PUBLIC_MOCK=0` (at build time) switches api.ts to the real routes. Signatures unchanged. `/play/fixture` still loads the fixture in live mode; a real scan's `/play/<wsId>` loads from the server. We flip it at Merge 1.
 - **Merged your p1/P1-11 into main** (Dharm asked), plus a lint ignore for `public/mediapipe-wasm/**` (MediaPipe's generated JS caused 532 lint problems). Your bundle concern: checked the real Next build, and mathjs is in **no** client chunk.
 - **/api/next skip handling:** the server remembers the last question it served; a call with no attempt after it marks that question skipped, so it won't be offered again.

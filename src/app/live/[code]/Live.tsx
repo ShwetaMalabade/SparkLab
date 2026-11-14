@@ -1,10 +1,12 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClassStats } from "@/lib/classStats";
+import type { Insight } from "@/lib/insight";
 
 type Toast = { id: string; title: string; detail: string | null; correct: boolean };
 const POLL_MS = 2000;
+const INSIGHT_MS = 20_000;
 
 export function Live() {
   const { code: raw } = useParams<{ code: string }>();
@@ -14,6 +16,8 @@ export function Live() {
   const [failures, setFailures] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const lastAt = useRef("");
+  const [insight, setInsight] = useState<Insight | null>(null);
+  const [insightBusy, setInsightBusy] = useState(false);
 
   // docs/plan/06 §3: poll every 2 s; the FIRST poll only records the time (no toasts for old answers).
   useEffect(() => {
@@ -61,6 +65,28 @@ export function Live() {
     const t = setTimeout(() => setToasts((x) => x.slice(1)), 4000);
     return () => clearTimeout(t);
   }, [toasts]);
+
+  // docs/plan/06 §6: AI insights refresh every 20 s (or on tap) once someone has answered.
+  const ready = !!stats && !stats.waiting && stats.ofStudents > 0;
+  const loadInsight = useCallback(async () => {
+    setInsightBusy(true);
+    try {
+      const r = await fetch(`/api/class/${encodeURIComponent(code)}/insights`, { method: "POST", cache: "no-store" });
+      if (r.ok) setInsight((await r.json()) as Insight);
+    } catch {
+      /* keep the last result on screen */
+    }
+    setInsightBusy(false);
+  }, [code]);
+  useEffect(() => {
+    if (!ready) return;
+    const first = setTimeout(() => void loadInsight(), 0);
+    const t = setInterval(() => void loadInsight(), INSIGHT_MS);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+    };
+  }, [ready, loadInsight]);
 
   if (error) return <main className="px-4 pt-14 text-lg text-coral">✗ {error}</main>;
   if (!stats) return <main className="px-4 pt-14 text-lg text-muted">Connecting to class {code}…</main>;
@@ -190,10 +216,51 @@ export function Live() {
               </ul>
             )}
           </Card>
+
+          {ready && <InsightCard insight={insight} busy={insightBusy} onRefresh={() => void loadInsight()} />}
         </>
       )}
       <p className="text-center text-xs text-muted">Updates every 2 s · every number computed by code · camera video never leaves the laptop</p>
     </main>
+  );
+}
+
+function InsightCard({ insight, busy, onRefresh }: { insight: Insight | null; busy: boolean; onRefresh: () => void }) {
+  return (
+    <section className="rounded-2xl border border-violet/40 bg-panel p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+          AI insights {insight && <span className="ml-1 normal-case tracking-normal text-lime">✓ numbers checked</span>}
+        </h2>
+        <button type="button" onClick={onRefresh} disabled={busy} className="rounded-lg border border-line px-2 py-1 text-sm text-muted disabled:opacity-50">
+          {busy ? "…" : "↻"}
+        </button>
+      </div>
+      {!insight ? (
+        <p className="text-muted">Reading the class…</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <ul className="flex list-disc flex-col gap-1 pl-5">
+            {insight.bullets.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+          {insight.groups.map((g) => (
+            <p key={g.name} className="text-sm">
+              <span className="font-semibold text-violet">Re-teach · {g.name}:</span> {g.students.join(", ")} → {g.mistake}
+            </p>
+          ))}
+          {insight.nextMove && (
+            <p className="text-sm">
+              <span className="font-semibold text-cyan">Tomorrow:</span> {insight.nextMove}
+            </p>
+          )}
+          {insight.source !== "ai" && (
+            <p className="text-xs text-muted">{insight.source === "last-good" ? "AI busy, showing the last checked insight" : "Counted by code"}</p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
