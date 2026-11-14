@@ -18,7 +18,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
 | P2-07 | Database | ✅ | 0809611 | db.ts (Mongo, cached client, indexes) + memoryDb.ts (OFFLINE=1), same Store interface; classCode.ts. 32 checks vs local Mongo + memory. aggregateClass comes with P2-15 |
 | P2-08 | Agents 1 + 2 | 🟦 | 108515b | prompts.ts (verbatim from 03 §4) + reader.ts + designer.ts done. Still to do: test the prompts on 3 real worksheet photos (needs a Gemini key) |
-| P2-09 | Scan pipeline + `/api/ingest` | ⬜ | | |
+| P2-09 | Scan pipeline + `/api/ingest` | 🟦 | c340337 | ingest.ts + route + resizeImage done; 25 checks with fake agents + curl. Done-when (printed sheet → flagged worksheet ≤ 25 s) needs a Gemini key |
 | P2-10 | Core routes | ⬜ | | |
 | P2-11 | Landing + Scan pages | ⬜ | | |
 | P2-12 | Coach `/api/next` | ⬜ | | |
