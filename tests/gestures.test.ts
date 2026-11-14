@@ -8,6 +8,7 @@ import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { classifyHand } from "../src/motion/hands";
+import { addAtom, MOLECULE_QUESTIONS, moleculeLayout } from "../src/game/molecules";
 import { reportFps, useQuality, particles } from "../src/three/quality";
 import { checkClip, packFrame, replayClip, type Clip } from "../src/motion/clips";
 import { judge, speciesOf, trapped, atomCounts, trapFormula } from "../src/game/balancer";
@@ -283,6 +284,23 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
   const flat = classifyHand(hand([false, false, false, false])).tilt;
   const tipped = classifyHand(hand([false, false, false, false], 0.8)).tilt;
   ok("hand: tilting the fist changes tilt by ~46°", Math.abs(Math.abs(tipped - flat) - 45.8) < 2, `${flat} → ${tipped}`);
+}
+
+// ---- Molecule Builder rules (code counts every atom) ----
+{
+  const water = MOLECULE_QUESTIONS.find((q) => q.formula === "H2O")!;
+  const a1 = addAtom(water, {}, "H");
+  ok("water: 1 H accepted, asks for more", a1.ok && !a1.done && /needs 1 more hydrogen and 1 more oxygen/.test(a1.message), a1.message);
+  const c = addAtom(water, { H: 1 }, "C");
+  ok("water: carbon rejected as not in water", !c.ok && c.reason === "wrong_element" && /Carbon isn't in water/.test(c.message), c.message);
+  const o = addAtom(water, { H: 1 }, "O");
+  ok("water: 1 H + 1 O → 'needs 1 more hydrogen'", o.ok && /needs 1 more hydrogen/.test(o.message), o.ok ? o.message : "");
+  const done = addAtom(water, { H: 1, O: 1 }, "H");
+  ok("water: 2 H + 1 O → done", done.ok && done.done && /H2O/.test(done.message));
+  const extra = addAtom(water, { H: 2, O: 0 }, "H");
+  ok("water: a 3rd H rejected (only 2)", !extra.ok && extra.reason === "too_many", extra.message);
+  ok("layout: H2O = O + 2 H, CH4 = C + 4 H", moleculeLayout("H2O").map((a) => a.el).join("") === "OHH" && moleculeLayout("CH4").map((a) => a.el).join("") === "CHHHH");
+  ok("every demo question's palette contains its elements", MOLECULE_QUESTIONS.every((q) => moleculeLayout(q.formula).every((a) => q.palette.includes(a.el))));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
