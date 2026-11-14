@@ -1,10 +1,10 @@
-# CONTRACTS.md — The only interfaces between Person 1 and Person 2
-**Owner:** Person 2. **Frozen after task P2-04** (Sat ~9:30). Later changes must be **additive** (new optional fields/functions) and logged in `PROGRESS-P2.md → Contract changes`.
+# CONTRACTS.md — The only interfaces between Shweta and Dharm
+**Owner:** Dharm. **Frozen after task P2-04** (Sat ~9:30). Later changes must be **additive** (new optional fields/functions) and logged in `PROGRESS-P2.md → Contract changes`.
 
 ---
 
 ## 1. Types — `src/lib/schema.ts` (pasted from `docs/plan/tested-code/`)
-P1 imports: `TWorksheet`, `TQuestion`, `TAttempt`, `Template`, `Reaction`. Key fields P1 reads:
+Shweta imports: `TWorksheet`, `TQuestion`, `TAttempt`, `Template`, `Reaction`. Key fields Shweta reads:
 
 | Field | Meaning for the game |
 |---|---|
@@ -18,7 +18,7 @@ P1 imports: `TWorksheet`, `TQuestion`, `TAttempt`, `Template`, `Reaction`. Key f
 | `question.reaction` | Mix Lab: `reactants[]`, `products[]`, `equation`, `observation`, `visual{bubbles,colorFrom,colorTo,precipitateColor,heat,flame}`, `hazard` |
 | `question.equation` | Balancer: the balanced answer, e.g. `"2H2 + O2 -> 2H2O"` |
 
-## 2. Client API — `src/lib/client/api.ts` (P2 owns; P1 calls)
+## 2. Client API — `src/lib/client/api.ts` (Dharm owns; Shweta calls)
 ```ts
 import type { TWorksheet, TQuestion, TAttempt } from "@/lib/schema";
 
@@ -41,20 +41,20 @@ export async function endSession(sessionId: string): Promise<void>;
 ```
 **Mock behaviour (until Merge 1):** `getWorksheet` → `data/fixtures/worksheet.json` for any id (also `wsId = "fixture"`); `createClass` → random 4-char code; `createSession` → `"s_mock"`; `postAttempt` → localStorage; `nextStep` → `fallbackNext` (next unplayed worksheet question, else finish), `source: "fallback"`.
 
-## 3. Routes P1 navigates to
+## 3. Routes Shweta navigates to
 | URL | Owner | Notes |
 |---|---|---|
-| `/play/[wsId]` | P1 | `wsId = "fixture"` works in mock mode |
-| `/results/[sessionId]` | P2 | P1 navigates here at the end. Until P2-18, it's a stub page |
+| `/play/[wsId]` | Shweta | `wsId = "fixture"` works in mock mode |
+| `/results/[sessionId]` | Dharm | Shweta navigates here at the end. Until P2-18, it's a stub page |
 
-## 4. Helpers P1 may import
+## 4. Helpers Shweta may import
 | Import | From | Use |
 |---|---|---|
-| `speak(text)`, `warmVoices()` | `@/lib/speak` | Spoken `why` + coach feedback (captions are P1's job) |
+| `speak(text)`, `warmVoices()` | `@/lib/speak` | Spoken `why` + coach feedback (captions are Shweta's job) |
 | `isBalanced`, `sameSpecies`, `withCoefficients`, `splitEquation` | `@/lib/chem` | Equation Balancer |
 
-## 5. Motion event bus (P1 internal; listed so P2 knows it exists)
+## 5. Motion event bus (Shweta internal; listed so Dharm knows it exists)
 `src/motion/types.ts`: `{ type: "hover"|"dwell"|"bothUp"|"clap"|"lean"|"fire"|"lost"|"found", side?: "left"|"right", targetId?: string, t: number }`.
 
-## 6. What P1 sends at LOCK-IN (`AttemptInput`)
+## 6. What Shweta sends at LOCK-IN (`AttemptInput`)
 `classCode, sessionId, worksheetId, questionId, questionOrigin, chosen ("A".."D" or "X"), chosenText, correct, misconceptionId, msToAnswer, input ("gesture"|"keyboard"|"mouse"), hoverTrace[], experiments[] (Launcher: thetaDeg, speed, landedM), mixTries[] (Mix Lab pairs), balancerSteps[] (coefficient arrays)`.

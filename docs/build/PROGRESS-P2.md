@@ -1,5 +1,5 @@
-# PROGRESS-P2.md — Person 2 · BRAIN
-**Written ONLY by P2's LLM.** P1's LLM reads this at the start of every task.
+# PROGRESS-P2.md — Dharm · BRAIN
+**Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
 **Last updated:** Sat 02:15 · **Now working on:** P2-04 · **Branch:** main
@@ -36,11 +36,11 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-24 | Backup video + Devpost draft | ⬜ | | |
 | P2-25 | Ship | ⬜ | | |
 
-## Requests to P1
+## Requests to Shweta
 <!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · what you need · why · which task waits on it -->
 - (none)
 
-## Answered requests (from P1)
+## Answered requests (from Shweta)
 <!-- - R-P1-1 → done in <commit> -->
 - (none)
 

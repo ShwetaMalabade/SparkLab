@@ -1,5 +1,5 @@
-# P1-TASKS.md — Person 1 · PLAY (motion, 3D, game)
-**You are Person 1's coding LLM.** Do these in order. Before each task: pull, read `PROGRESS-P2.md`, check **Waits on**. After each: test, commit `P1-xx: …`, update `PROGRESS-P1.md`.
+# P1-TASKS.md — Shweta · PLAY (motion, 3D, game)
+**You are Shweta's coding LLM.** Do these in order. Before each task: pull, read `PROGRESS-P2.md`, check **Waits on**. After each: test, commit `P1-xx: …`, update `PROGRESS-P1.md`.
 Spec: `docs/plan/04` (motion), `05` (game), `07` (UI). Contracts: `docs/build/CONTRACTS.md`.
 
 Allowed paths: `src/motion/**`, `src/three/**`, `src/game/**`, `src/app/play/**`, `public/{mediapipe-wasm,models,sfx}/**`, `tests/fixtures/**`, `tests/gestures.test.ts`.
@@ -11,7 +11,7 @@ Allowed paths: `src/motion/**`, `src/three/**`, `src/game/**`, `src/app/play/**`
 ### P1-00 · Read + wait for the scaffold (20 min)
 - Read `docs/plan/00`, `04`, `05`, `13`, `docs/build/CONTRACTS.md`.
 - **Waits on:** P2-01 (repo), P2-04 (contracts + fixture) for imports. Until P2-01 is pushed (~9:30), only read and plan.
-- **Done when:** you can list, for each P1 task, which plan section it implements.
+- **Done when:** you can list, for each Shweta task, which plan section it implements.
 
 ### P1-01 · Camera + Pose on a dev page (30 min) · Waits on: P2-01
 - Copy MediaPipe assets (`docs/plan/02 §3`): `cp -r node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe-wasm/`; download `pose_landmarker_lite.task` to `public/models/`.
@@ -73,7 +73,7 @@ Allowed paths: `src/motion/**`, `src/three/**`, `src/game/**`, `src/app/play/**`
 - `src/app/play/[wsId]/page.tsx`: `getWorksheet(wsId)` → Calibrate → `createSession({classCode: getClassCode() ?? "TEST", worksheetId, nickname})` → `<GameRunner/>` with Arena + Avatar + HUD (`docs/plan/07 §2–3`: question top, score left, mirrored mini-webcam right, gesture hints bottom, captions bar).
 - **Done when:** `/play/fixture` runs the whole fixture by gesture **and** by keyboard only.
 
-**⛳ MERGE 1 · 14:00** → `MERGE-CHECKLISTS.md §1` (with Person 2)
+**⛳ MERGE 1 · 14:00** → `MERGE-CHECKLISTS.md §1` (with Dharm)
 
 ---
 

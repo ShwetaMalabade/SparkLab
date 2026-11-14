@@ -1,5 +1,5 @@
-# PROGRESS-P1.md — Person 1 · PLAY
-**Written ONLY by P1's LLM.** P2's LLM reads this at the start of every task.
+# PROGRESS-P1.md — Shweta · PLAY
+**Written ONLY by Shweta's LLM.** Dharm's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
 **Last updated:** — · **Now working on:** — · **Branch:** —
@@ -34,11 +34,11 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P1-21 | People + lighting test | ⬜ | | |
 | P1-22 | Freeze | ⬜ | | |
 
-## Requests to P2
+## Requests to Dharm
 <!-- Things you need changed in THEIR files. Format: - [ ] R-P1-1 · what you need · why · which task waits on it -->
 - (none)
 
-## Answered requests (from P2)
+## Answered requests (from Dharm)
 <!-- - R-P2-1 → done in <commit> -->
 - (none)
 

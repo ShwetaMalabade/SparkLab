@@ -1,13 +1,13 @@
 # MERGE-CHECKLISTS.md — done by both people together (30 min each)
 
-**Order every time:** both stop coding → P2 merges `p2/*` into `main` → P1 rebases on `main`, merges `p1/*` → `npm run build` → run the tests → deploy → walk the checklist → each LLM writes the result in its own progress file's **Merge log** → post a 3-line summary in #hack-project.
+**Order every time:** both stop coding → Dharm merges `p2/*` into `main` → Shweta rebases on `main`, merges `p1/*` → `npm run build` → run the tests → deploy → walk the checklist → each LLM writes the result in its own progress file's **Merge log** → post a 3-line summary in #hack-project.
 
 If an item fails: write it as ⛔ with an owner, **keep going** (don't block the other person), fix it in the next phase.
 
 ---
 
 ## §1 · MERGE 1 · Sat 14:00 — "a real worksheet becomes a playable level"
-Before: P2 switches `api.ts` to real calls for everything **except** `nextStep` (still the code fallback).
+Before: Dharm switches `api.ts` to real calls for everything **except** `nextStep` (still the code fallback).
 - [ ] `npm run build` passes; tests 86/86
 - [ ] Landing creates a class; the QR opens `/live/<code>` on a phone (page may still be a stub)
 - [ ] Scan the **printed** worksheet → agent steps stream → verified worksheet saved, the key typo flagged (`answer_key_mismatch`)
@@ -15,7 +15,7 @@ Before: P2 switches `api.ts` to real calls for everything **except** `nextStep` 
 - [ ] Each lock-in writes a document to Mongo `attempts` with `input`, `hoverTrace`, `chosenText`
 - [ ] Whole flow also works **keyboard only**
 - [ ] Vercel URL works in an incognito window
-- **If scan is red:** P1 keeps using the fixture; P2 fixes ingest first.
+- **If scan is red:** Shweta keeps using the fixture; Dharm fixes ingest first.
 
 ## §2 · MERGE 2 · Sat 19:00 — "the coach and the phone work"
 - [ ] Coach picks the next step after each answer (trace: `source: coach`)

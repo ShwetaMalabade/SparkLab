@@ -1,5 +1,5 @@
-# P2-TASKS.md — Person 2 · BRAIN (AI, backend, pages, ship)
-**You are Person 2's coding LLM.** Do these in order. Before each task: pull, read `PROGRESS-P1.md` (especially **Requests to Person 2**), check **Waits on**. After each: test, commit `P2-xx: …`, update `PROGRESS-P2.md`.
+# P2-TASKS.md — Dharm · BRAIN (AI, backend, pages, ship)
+**You are Dharm's coding LLM.** Do these in order. Before each task: pull, read `PROGRESS-P1.md` (especially **Requests to Dharm**), check **Waits on**. After each: test, commit `P2-xx: …`, update `PROGRESS-P2.md`.
 Spec: `docs/plan/02` (architecture), `03` (AI + verification), `06` (live view), `07` (UI), `10` (prizes), `11` (demo). Contracts you own: `docs/build/CONTRACTS.md`.
 **2-person scope:** Agents 1, 2, 4, 6. Agent 5 only if Merge 2 is green. **Agents 3 (Critic) and 7 (Warm-up) are CUT.**
 
@@ -7,13 +7,13 @@ Allowed paths: `src/lib/**`, `src/app/api/**`, `src/app/page.tsx`, `src/app/{sca
 
 ---
 
-## PHASE 0 · Sat 9:00–10:00 — Person 1 is waiting on you: push P2-01…P2-04 by ~9:30
+## PHASE 0 · Sat 9:00–10:00 — Shweta is waiting on you: push P2-01…P2-04 by ~9:30
 
 ### P2-01 · Repo + scaffold (15 min) · Unblocks: P1-01
 - Public GitHub repo (created after Fri 8 PM ✓). **Run `npx create-next-app@latest homework-arena --ts --tailwind --eslint --app --src-dir --import-alias "@/*"` in an EMPTY folder first** (it refuses to run in a folder that already has files), **then** unzip `homework-arena-repo-start.zip` into `homework-arena/` (adds `AGENTS.md`, `CLAUDE.md`, `docs/`).
 - Deps (`docs/plan/02 §3`): `three @react-three/fiber @react-three/drei @react-three/postprocessing zustand zod@3 mathjs framer-motion qrcode @mediapipe/tasks-vision @google/genai mongodb @aws-sdk/client-bedrock-runtime`; dev: `@types/three @types/qrcode tsx typescript @types/node`.
 - Check `AGENTS.md`, `CLAUDE.md`, `docs/plan/`, `docs/build/` are at the root. `.env.example` with every key from `02 §3` (blank). `.gitignore` has `.env.local`.
-- Empty folders with `.gitkeep` for P1's paths so imports resolve.
+- Empty folders with `.gitkeep` for Shweta's paths so imports resolve.
 - **Done when:** `npm run build` passes; pushed to `main`.
 
 ### P2-02 · Design tokens + layout (15 min)

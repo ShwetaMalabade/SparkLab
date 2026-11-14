@@ -35,23 +35,25 @@ Environment variables go in `.env.local` (never commit it) and are listed in `do
 - **Request flow:** `/api/ingest` streams NDJSON step lines and then the `{worksheet}` (`maxDuration = 60`). On lock-in, the client calls `POST /api/attempt` and `POST /api/next` in parallel. The coach result goes through `applyDirector()`, and any variant it writes is re-verified by code. The client aborts after 6 s and uses `fallbackNext()` (the next unplayed question). Insight text must pass `numbersAllowed()`, so invented numbers are rejected.
 - **Live teacher view:** `/live/[code]` polls `GET /api/class/[code]` every 2 s. There are no change streams or websockets.
 - **Mongo:** cache the client on `globalThis`. `createdAt` is a server-set BSON `Date` with a 24 h TTL. `memoryDb.ts` mirrors the same functions for offline mode.
-- **Client boundary:** Person 1 calls only `src/lib/client/api.ts` (signatures in `docs/build/CONTRACTS.md §2`). `getMode()` returns `mock`, `live` or `offline`. In mock mode, `getWorksheet` returns the fixture (`wsId = "fixture"`). `postAttempt` and `nextStep` **never throw**.
+- **Client boundary:** Shweta calls only `src/lib/client/api.ts` (signatures in `docs/build/CONTRACTS.md §2`). `getMode()` returns `mock`, `live` or `offline`. In mock mode, `getWorksheet` returns the fixture (`wsId = "fixture"`). `postAttempt` and `nextStep` **never throw**.
 - **Next.js 16.4** (scaffolded with `cacheComponents: true` in `next.config.ts`), so the plan's Next 15 notes may be stale. Before writing route or page code, read the relevant guide in `node_modules/next/dist/docs/`. Route `params` is a Promise: use `const { code } = await params;` on the server and `useParams()` on the client. Tailwind is v4, which uses CSS `@theme` in `globals.css` instead of a `tailwind.config.ts`.
 - **Motion:** gestures are published on the bus defined in `src/motion/types.ts` (hover, dwell, bothUp, clap, lean, fire, lost, found). The default is seated, aiming with the forearm (elbow to wrist). Every gesture has a keyboard twin, and the demo must never block on the camera or the network. Camera frames never leave the browser.
+
+> **Who's who:** **Dharm** = BRAIN (task IDs `P2-xx`, `docs/build/P2-TASKS.md`, `PROGRESS-P2.md`, branches `p2/*`) · **Shweta** = PLAY (task IDs `P1-xx`, `docs/build/P1-TASKS.md`, `PROGRESS-P1.md`, branches `p1/*`). Address work by name; the `P1`/`P2` prefixes are just stable IDs.
 
 ## Team workflow (mandatory)
 
 ### Step 1 · Find out who you are
-The human will start the session with **"You are Person 1"** or **"You are Person 2"**. If they didn't, **ask before doing anything.**
+The human will start the session with **"You are Dharm"** or **"You are Shweta"** (or "I'm Dharm" / "I'm Shweta"). If they didn't, **ask before doing anything.**
 
-| | Person 1 · **PLAY** | Person 2 · **BRAIN** |
+| | Shweta · **PLAY** | Dharm · **BRAIN** |
 |---|---|---|
 | Builds | Motion tracking, 3D scene, game loop, templates, Play page | AI agents, verification, API routes, MongoDB, Landing/Scan/Review/Results/Live pages, offline replay, deploy |
 | Your task list | `docs/build/P1-TASKS.md` | `docs/build/P2-TASKS.md` |
 | **Your** progress file (you write it) | `docs/build/PROGRESS-P1.md` | `docs/build/PROGRESS-P2.md` |
 | **Other** progress file (read only) | `docs/build/PROGRESS-P2.md` | `docs/build/PROGRESS-P1.md` |
 
-File ownership is in `docs/build/RULES.md §2`. P1 owns `src/{motion,three,game}/**` and `src/app/play/**`. P2 owns `src/lib/**`, `src/app/api/**` and the other pages. P1 may **import** (never edit) `@/lib/schema`, `@/lib/client/api`, `@/lib/client/types`, `@/lib/speak` and `@/lib/chem`. `package.json` is shared: add one dependency per commit and pull first.
+File ownership is in `docs/build/RULES.md §2`. Shweta owns `src/{motion,three,game}/**` and `src/app/play/**`. Dharm owns `src/lib/**`, `src/app/api/**` and the other pages. Shweta may **import** (never edit) `@/lib/schema`, `@/lib/client/api`, `@/lib/client/types`, `@/lib/speak` and `@/lib/chem`. `package.json` is shared: add one dependency per commit and pull first.
 
 ### Step 2 · At the start of every session (and every new task)
 1. `git pull origin main` (and your own branch).
@@ -60,7 +62,7 @@ File ownership is in `docs/build/RULES.md §2`. P1 owns `src/{motion,three,game}
 4. Pick the next task in your task file whose **Waits on** items are all ✅ in the right progress file. If a dependency isn't done, say so and pick the next unblocked task (or use the mock or fixture the task names).
 
 ### Step 3 · While working a task
-- Touch **only** the paths your task file allows. Need a change elsewhere? Add it to **Requests to Person X** in **your** progress file and code against the current version.
+- Touch **only** the paths your task file allows. Need a change elsewhere? Add it to **Requests to the other person** in **your** progress file and code against the current version.
 - Before writing code, tell the human the task ID, the files you'll create or edit, and how you'll test it.
 - Follow the plan section the task cites (`docs/plan/NN-*.md §n`). The plan is the spec, so don't invent features. Never build anything marked **CUT**. If a task runs more than 1.5× its estimate, tell the human and propose the cut from `docs/plan/13 §7`.
 
@@ -72,6 +74,6 @@ File ownership is in `docs/build/RULES.md §2`. P1 owns `src/{motion,three,game}
 
 ### Never
 - Edit the other person's files or their progress file.
-- Change a signature in `src/lib/schema.ts` or `src/lib/client/api.ts`. Only Person 2 may, only additively, and each change is logged in `PROGRESS-P2.md → Contract changes`.
+- Change a signature in `src/lib/schema.ts` or `src/lib/client/api.ts`. Only Dharm may, only additively, and each change is logged in `PROGRESS-P2.md → Contract changes`.
 - Show a number that code didn't compute, commit `.env.local`, or add a paid service.
 - Put `any` in an exported signature, or let AI output contain real-world chemistry procedures (hazards appear only as warnings).

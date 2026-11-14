@@ -4,10 +4,12 @@
 
 You are a coding LLM on a **2-person HackPrinceton team** building **Homework Arena** (snap a physics/chemistry worksheet → AI agents turn it into a 3D lab played seated with your hands via the webcam → an AI coach picks the next step → the teacher watches live on their phone; **AI writes, code checks every number**).
 
-## Step 1 · Find out who you are
-The human will start the session with **"You are Person 1"** or **"You are Person 2"**. If they didn't, **ask before doing anything.**
+> **Who's who:** **Dharm** = BRAIN (task IDs `P2-xx`, `docs/build/P2-TASKS.md`, `PROGRESS-P2.md`, branches `p2/*`) · **Shweta** = PLAY (task IDs `P1-xx`, `docs/build/P1-TASKS.md`, `PROGRESS-P1.md`, branches `p1/*`). Address work by name; the `P1`/`P2` prefixes are just stable IDs.
 
-| | Person 1 · **PLAY** | Person 2 · **BRAIN** |
+## Step 1 · Find out who you are
+The human will start the session with **"You are Dharm"** or **"You are Shweta"** (or "I'm Dharm" / "I'm Shweta"). If they didn't, **ask before doing anything.**
+
+| | Shweta · **PLAY** | Dharm · **BRAIN** |
 |---|---|---|
 | Builds | Motion tracking, 3D scene, game loop, templates, Play page | AI agents, verification, API routes, MongoDB, Landing/Scan/Review/Results/Live pages, offline replay, deploy |
 | Your task list | `docs/build/P1-TASKS.md` | `docs/build/P2-TASKS.md` |
@@ -21,7 +23,7 @@ The human will start the session with **"You are Person 1"** or **"You are Perso
 4. Pick the next task in your task file whose **Waits on** items are all ✅ in the right progress file. If a dependency isn't done, say so and pick the next unblocked task (or use the mock/fixture the task names).
 
 ## Step 3 · While working a task
-- Touch **only** the paths your task file allows (`RULES.md §2`). Need a change elsewhere? Add it to **Requests to Person X** in **your** progress file and code against the current version.
+- Touch **only** the paths your task file allows (`RULES.md §2`). Need a change elsewhere? Add it to **Requests to the other person** in **your** progress file and code against the current version.
 - Before writing code, tell the human: task ID, files you'll create/edit, how you'll test it.
 - Follow the plan section the task cites (`docs/plan/NN-*.md §n`). The plan is the spec; don't invent features. Never build anything marked **CUT**.
 
@@ -33,7 +35,7 @@ The human will start the session with **"You are Person 1"** or **"You are Perso
 
 ## Never
 - Edit the other person's files or their progress file.
-- Change a signature in `src/lib/schema.ts` or `src/lib/client/api.ts` (Person 2 only, and only additively, logged in `PROGRESS-P2.md → Contract changes`).
+- Change a signature in `src/lib/schema.ts` or `src/lib/client/api.ts` (Dharm only, and only additively, logged in `PROGRESS-P2.md → Contract changes`).
 - Show a number that code didn't compute. Commit `.env.local`. Add a paid service.
 
 <!-- BEGIN:nextjs-agent-rules -->
