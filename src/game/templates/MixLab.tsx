@@ -38,8 +38,14 @@ type MixState = {
   tries: [string, string][];
   wrong: number;
   autoShown: boolean;
+  /** Beakers already poured into the flask this try (pour gesture), and each hand's tilt when it grabbed. */
+  poured: number[];
+  grabTilt: Record<Side, number>;
 };
-const fresh = (): MixState => ({ sub: "mix", held: { left: null, right: null }, status: "idle", statusAt: 0, tries: [], wrong: 0, autoShown: false });
+const fresh = (): MixState => ({ sub: "mix", held: { left: null, right: null }, status: "idle", statusAt: 0, tries: [], wrong: 0, autoShown: false, poured: [], grabTilt: { left: 0, right: 0 } });
+/** Finger tracker on: grab with a fist, pour by tilting over the flask (no clap). */
+const fingerMode = () => useGame.getState().handsStatus === "ready";
+const POUR_TILT = 35; // degrees of hand roll from the grab pose
 const useMix = create<MixState>(() => fresh());
 
 /** Beakers: reactants + decoys, in a stable shuffled order (so the pair isn't always the first two). */
@@ -58,6 +64,27 @@ const isPair = (q: TQuestion, a: string, b: string) => {
   return (a === r1.formula && b === r2.formula) || (a === r2.formula && b === r1.formula);
 };
 const slotId = (i: number) => `beaker:${i}`;
+
+/** Is this hand's cursor over the flask (a generous box around it)? */
+function overFlask(side: Side) {
+  const c = useGame.getState().cursors[side];
+  const r = getTargetRect("mix:flask");
+  if (!c.visible || !r) return false;
+  const m = 70;
+  return c.x > r.x - m && c.x < r.x + r.w + m && c.y > r.y - 2 * m && c.y < r.y + r.h + m;
+}
+
+/** Pour the beaker in this hand into the flask; the second pour starts the reaction. */
+function pour(side: Side) {
+  const st = useMix.getState();
+  const i = st.held[side];
+  if (i === null || st.poured.includes(i)) return;
+  const poured = [...st.poured, i];
+  playSfx("pop", 0.4);
+  if (poured.length < 2) return useMix.setState({ poured, held: { ...st.held, [side]: null } });
+  // Both in: hand the pair to the normal mix (judge → reaction or "not the pair").
+  useMix.setState({ poured: [], held: { left: poured[0], right: poured[1] }, status: "pouring", statusAt: performance.now() });
+}
 
 // ================================================================ DOM overlay
 
@@ -94,6 +121,7 @@ function Overlay(props: TemplateProps) {
         templateHint:
           status === "reacting" ? "Watch the reaction…"
           : status === "pouring" ? "Pouring…"
+          : fingerMode() ? "✊ Grab a beaker · hold it over the flask · tilt your hand to pour (keys 1–4, C)"
           : both ? "👏 Clap to mix (C)"
           : "Hover a hand on a beaker to grab it · 👏 Clap to mix (keys 1–4, C)",
         skipHandler: () => (useMix.getState().sub === "mix" ? (goAnswer(), true) : false),
@@ -107,10 +135,14 @@ function Overlay(props: TemplateProps) {
       const L = live.current;
       const st = useMix.getState();
       if (L.phase !== "play" || L.paused || st.sub !== "mix" || st.status !== "idle") return;
+      if (st.poured.includes(i)) return; // already in the flask
       const holder = (["left", "right"] as const).find((s) => st.held[s] === i);
-      if (holder) return useMix.setState({ held: { ...st.held, [holder]: null } }); // put it back
+      if (holder) {
+        if (side && fingerMode()) return; // finger mode: open your hand to put it back
+        return useMix.setState({ held: { ...st.held, [holder]: null } }); // put it back
+      }
       const hand = side && st.held[side] === null ? side : (["left", "right"] as const).find((s) => st.held[s] === null);
-      if (hand) useMix.setState({ held: { ...st.held, [hand]: i } });
+      if (hand) useMix.setState({ held: { ...st.held, [hand]: i }, grabTilt: { ...st.grabTilt, [hand]: useGame.getState().hands[hand].tilt } });
     };
     const offs = [
       subscribe("dwell", (e) => {
@@ -120,11 +152,20 @@ function Overlay(props: TemplateProps) {
       subscribe("command", (e) => {
         if (e.cmd === "pick" && e.value !== undefined && e.value < beakers.length) toggle(e.value, undefined);
       }),
-      subscribe("clap", () => {
+      subscribe("clap", (e) => {
+        if (e.source === "gesture" && fingerMode()) return; // no clapping: you pour with your hands
         const st = useMix.getState();
         if (live.current.phase !== "play" || st.sub !== "mix" || st.status !== "idle") return;
         if (st.held.left === null || st.held.right === null) return;
         useMix.setState({ status: "pouring", statusAt: performance.now() });
+      }),
+      // Open your hand: over the flask = pour it in; anywhere else = the beaker goes back to its place.
+      subscribe("release", (e) => {
+        const side = e.side;
+        const st = useMix.getState();
+        if (!side || !fingerMode() || st.held[side] === null || st.status !== "idle" || live.current.phase !== "play") return;
+        if (overFlask(side)) pour(side);
+        else useMix.setState({ held: { ...st.held, [side]: null } });
       }),
     ];
     return () => offs.forEach((off) => off());
@@ -137,6 +178,14 @@ function Overlay(props: TemplateProps) {
       const st = useMix.getState();
       const now = performance.now();
       const el = now - st.statusAt;
+      // Tilt to pour: a held beaker over the flask, hand rolled ≥ 35° from how it grabbed.
+      if (st.status === "idle" && fingerMode() && live.current.phase === "play") {
+        for (const side of ["left", "right"] as const) {
+          if (st.held[side] === null || !overFlask(side)) continue;
+          const d = Math.abs(((useGame.getState().hands[side].tilt - st.grabTilt[side] + 540) % 360) - 180);
+          if (d >= POUR_TILT) return pour(side);
+        }
+      }
       if (st.status === "pouring" && el >= POUR_MS) {
         const a = beakers[st.held.left!].formula;
         const b = beakers[st.held.right!].formula;
@@ -153,7 +202,7 @@ function Overlay(props: TemplateProps) {
           const li = beakers.findIndex((x) => x.formula === r[0].formula);
           const ri = beakers.findIndex((x) => x.formula === r[1].formula);
           useMix.setState({ held: { left: li, right: ri }, status: "pouring", statusAt: now, autoShown: true });
-        } else useMix.setState({ held: { left: null, right: null }, status: "idle", statusAt: now });
+        } else useMix.setState({ held: { left: null, right: null }, status: "idle", statusAt: now, poured: [] });
       } else if (st.status === "reacting" && el >= REACT_MS && st.sub === "mix") goAnswer();
     }, 100);
     return () => clearInterval(id);
@@ -204,6 +253,7 @@ function BeakerSlot({ index, species, holder, interactive }: { index: number; sp
   const ref = useRef<HTMLDivElement>(null);
   const mouse = useTarget(slotId(index), ref, interactive);
   const over = useGame((s) => s.cursors.left.targetId === slotId(index) || s.cursors.right.targetId === slotId(index));
+  const poured = useMix((s) => s.poured.includes(index));
   return (
     <div
       ref={ref}
@@ -218,7 +268,8 @@ function BeakerSlot({ index, species, holder, interactive }: { index: number; sp
         <span className="block text-sm text-muted">{index + 1} · {species.name}</span>
         <ChemText text={species.formula} className="text-xl" />
       </span>
-      {holder && <span className="absolute top-3 text-sm text-muted">in your {holder} hand · hover to put back</span>}
+      {holder && <span className="absolute top-3 text-sm text-muted">in your {holder} hand · {fingerMode() ? "tilt over the flask to pour" : "hover to put back"}</span>}
+      {poured && <span className="absolute top-3 rounded-full bg-lime/15 px-2 text-sm text-lime">✓ poured in</span>}
     </div>
   );
 }
