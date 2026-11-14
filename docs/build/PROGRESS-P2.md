@@ -2,7 +2,7 @@
 **Written ONLY by P2's LLM.** P1's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** — · **Now working on:** — · **Branch:** —
+**Last updated:** Sat 02:15 · **Now working on:** P2-02 · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -10,7 +10,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 ## Tasks
 | ID | Task | Status | Commit | Note (1 line) |
 |---|---|---|---|---|
-| P2-01 | Repo + scaffold | ⬜ | | |
+| P2-01 | Repo + scaffold | ✅ | 4bfdc3a | Next 16.4 + Tailwind v4 (no tailwind.config; tokens go in globals.css @theme). Build + lint green. Not pushed yet (no GitHub remote) |
 | P2-02 | Design tokens + layout | ⬜ | | |
 | P2-03 | Paste the tested code | ⬜ | | |
 | P2-04 | Contracts + fixture + mocks | ⬜ | | |
@@ -46,6 +46,9 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
 ## Contract changes (schema.ts / api.ts) — additive only
 - (none)
+
+## Notes for the partner
+- Scaffold is **Next.js 16.4** (not 15). Read `node_modules/next/dist/docs/` before Next-specific code; `cacheComponents: true` is on. Empty `.gitkeep` folders exist for all your paths.
 
 ## Merge log
 | Merge | Time | Result | Notes |
