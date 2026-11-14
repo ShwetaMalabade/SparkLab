@@ -93,7 +93,8 @@ export function ClipRecorder() {
   const left = busy ? Math.max(0, Math.ceil((state.until - now) / 1000)) : 0;
 
   return (
-    <div className="rounded-xl border border-line bg-panel p-4">
+    // Floats in a corner so the A–D targets stay on screen while recording (rects are saved in viewport px).
+    <div className="fixed bottom-4 right-4 z-40 w-[420px] max-w-[92vw] rounded-xl border border-line bg-panel/95 p-4 shadow-xl backdrop-blur">
       <h2 className="mb-2 font-semibold">Record a test clip (landmarks only, no video)</h2>
       <div className="flex flex-wrap items-center gap-2">
         <select value={preset} disabled={busy} onChange={(e) => setPreset(e.target.value)} className="rounded-lg border border-line bg-navy px-2 py-1">
@@ -124,7 +125,7 @@ export function ClipRecorder() {
               Discard
             </button>
           </div>
-          <span className="text-muted">Then move it into tests/fixtures/ (keep a failing one too: it shows what to tune). The replay also shows in the event log above.</span>
+          <span className="text-muted">Then move it into tests/fixtures/ (keep a failing one too: it shows what to tune). The replay also shows in the event log. Reload this page after a code update before recording.</span>
         </div>
       )}
     </div>

@@ -97,7 +97,12 @@ export function Calibrate({ onStart, accent = "cyan" }: { onStart: (r: Calibrati
           if (f.t - aimSince >= AIM_MS) aimOk = true;
         } else aimSince = null;
       }
-      if (bodyOk && aimOk) hint = "All set! Press Start";
+      // Recorded clips showed elbows at the very edge of the picture make low angles read too steep (30° read as 45°).
+      const elbow = p ? p[engine.opts.leftHanded ? L_EL : R_EL] : null;
+      const vw = f.videoW || 640, vh = f.videoH || 480;
+      const elbowAtEdge = !!elbow && (elbow.x < vw * 0.08 || elbow.x > vw * 0.92 || elbow.y > vh * 0.9);
+      if (bodyOk && !aimOk && elbowAtEdge) hint = "Move back a little (or tilt the camera down) so your elbow is fully in the picture";
+      if (bodyOk && aimOk) hint = elbowAtEdge ? "All set! Tip: move back a little so your elbow is in the picture (better aim)" : "All set! Press Start";
 
       if (f.t - lastUi > 80 || (bodyOk && aimOk)) {
         lastUi = f.t;

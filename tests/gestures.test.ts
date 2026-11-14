@@ -84,10 +84,11 @@ ok("disarmed clap is dropped", count("clap") === 0);
 
 // ---- both hands up: above nose.y − 0.2·sw for 3 frames; once per raise ----
 reset();
-const up = body({ lw: { x: 440, y: 90 }, rw: { x: 200, y: 90 }, le: { x: 430, y: 180 }, re: { x: 210, y: 180 } });
+// Hands above the head: wrists ≈ 0.8 sw above the nose (what the recorded bothUp clip shows). Line = 150 − 0.4·160 = 86 px.
+const up = body({ lw: { x: 440, y: 20 }, rw: { x: 200, y: 20 }, le: { x: 430, y: 130 }, re: { x: 210, y: 130 } });
 // A 2-frame flick above the line (e.g. scratching your head) must not fire.
 const flickBase = body({ lw: { x: 440, y: 140 }, rw: { x: 200, y: 140 }, le: { x: 430, y: 200 }, re: { x: 210, y: 200 } });
-hold(flickBase, 500); // just below the line (118 px)
+hold(flickBase, 500); // below the line (86 px)
 run([up, up]);
 hold(flickBase, 500);
 ok("bothUp needs 3 frames above the line", count("bothUp") === 0, `got ${count("bothUp")}`);
@@ -99,6 +100,10 @@ ok("holding up does not repeat", count("bothUp") === 1, `got ${count("bothUp")}`
 hold(body(), 300);
 hold(up, 300);
 ok("lower + raise again fires again", count("bothUp") === 2, `got ${count("bothUp")}`);
+// Hands at chin/forehead height (60° aim with both arms, head dip while clapping) are not "hands up".
+reset();
+hold(body({ lw: { x: 440, y: 100 }, rw: { x: 200, y: 100 }, le: { x: 430, y: 190 }, re: { x: 210, y: 190 } }), 1500);
+ok("hands at forehead height → no bothUp", count("bothUp") === 0, `got ${count("bothUp")}`);
 
 // ---- lean: shMid shift > 0.4 sw from baseline, mirrored direction ----
 engine.setBaseline({ sw: 160, shMidX: 320, shMidY: 260, noseY: 150 });

@@ -15,9 +15,9 @@ export const T = {
   dwellMs: 800,
   dwellCooldownMs: 500,
   bothUpFrames: 3,
-  bothUpAboveNose: 0.2, // × sw
+  bothUpAboveNose: 0.4, // × sw (recorded clips: 0.2 fired on a 60° aim, on head dips while clapping, and missed "lowered to the chin")
   bothUpCooldownMs: 700,
-  clapClose: 0.35, // × sw
+  clapClose: 0.4, // × sw (recorded clap clip: a real clap closed at 0.36)
   clapOpen: 1.2, // × sw
   clapWindowMs: 600,
   clapCooldownMs: 800,
