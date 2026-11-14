@@ -18,7 +18,8 @@ import { HandCursors } from "@/three/HandCursor";
 import { WorldLabelsLayer } from "@/three/WorldLabels";
 import { GameHud } from "./GameHud";
 import { buildAttempt, scoreAnswer } from "./scoring";
-import { subscribe, useGame, type GameSession, type LockResult, type Phase } from "./store";
+import { subscribe, useGame, type GameSession, type LockResult, type Phase, type TraceEntry } from "./store";
+import { TraceDrawer } from "./TraceDrawer";
 import { pickTemplate } from "./templates";
 import { sayNext, sayNow, stopSpeaking } from "./voice";
 
@@ -71,13 +72,23 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
     present(ns: NextStep) {
       const G = useGame.getState();
       if (G.phase === "end") return;
-      G.setGame({ lastNext: ns, trace: [...G.trace, ns] });
-      if (clock.current / 1000 >= session.timeBudgetSec) return loop.current.finish("time budget used");
-      let q = ns.action === "play" ? ns.question : undefined;
+      const prev = G.question;
+      const r = G.lastResult;
+      const entry: TraceEntry = {
+        ns,
+        after: prev && r ? { questionId: prev.id, origin: prev.origin, chosenText: r.chosenText, correct: r.correct, misconceptionId: r.misconceptionId } : null,
+        skipped: prev && !r ? prev.id : null,
+      };
+      const overBudget = clock.current / 1000 >= session.timeBudgetSec;
+      let q = overBudget ? undefined : ns.action === "play" ? ns.question : undefined;
       // Local safety net: never replay a worksheet question (e.g. after N skipped it without an attempt).
       if (q && q.origin === "worksheet" && G.played.includes(q.id)) {
+        entry.replaced = q.id;
         q = worksheet.questions.find((x) => x.origin === "worksheet" && !G.played.includes(x.id));
       }
+      entry.served = q ? { id: q.id, origin: q.origin } : null;
+      G.setGame({ lastNext: ns, trace: [...G.trace, entry] });
+      if (overBudget) return loop.current.finish("time budget used");
       if (!q) return loop.current.finish(ns.reason);
       nextResult.current = null;
       waitingForNext.current = false;
@@ -246,6 +257,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
         total={worksheet.questions.length}
       />
       {!paused && phase !== "end" && <HandCursors accent={accent} />}
+      <TraceDrawer />
     </div>
   );
 }

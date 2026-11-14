@@ -51,6 +51,17 @@ export type LockResult = {
   balancerSteps?: number[][];
 };
 
+/** One coach/fallback decision, with the answer that led to it (null = first question or a skip). */
+export type TraceEntry = {
+  ns: NextStep;
+  after: { questionId: string; origin: TQuestion["origin"]; chosenText: string; correct: boolean; misconceptionId: string | null } | null;
+  skipped: string | null;
+  /** The question actually shown next (null = finish). */
+  served?: { id: string; origin: TQuestion["origin"] } | null;
+  /** The pick was already played, so code served the next unplayed worksheet question instead. */
+  replaced?: string;
+};
+
 export type GameSlice = {
   session: GameSession | null;
   question: TQuestion | null;
@@ -65,7 +76,7 @@ export type GameSlice = {
   played: string[];
   lastNext: NextStep | null;
   /** Every NextStep this session, for the AI trace drawer (P1-17). */
-  trace: NextStep[];
+  trace: TraceEntry[];
   lastResult: (LockResult & { points: number }) | null;
   caption: string;
   coachLine: string | null;
