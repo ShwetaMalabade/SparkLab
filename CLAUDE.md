@@ -15,11 +15,13 @@ The app was scaffolded in P2-01 (Next.js + deps installed). Until P2-03 copies i
 ```bash
 npm run dev                      # local dev
 npm run build                    # must pass before any merge into main (main auto-deploys to Vercel)
+rm -rf .next && npm run build     # if globals.css/@theme edits don't show up (Turbopack + Tailwind loader caches stale CSS)
 # Tests use a plain tsx harness (PASS/FAIL lines), not a test runner. Run one file at a time:
 npx tsx tests/verify.test.ts && npx tsx tests/assemble.test.ts && npx tsx tests/director.test.ts   # must stay 86/86 after touching src/lib
 npx tsx scripts/make-fixture.ts  # regenerates data/fixtures/worksheet.json through the real assemble()
 npx tsx scripts/test-ai.ts       # AI key smoke test → {"ok":true}
 OFFLINE=1 npm run build && OFFLINE=1 npm start   # offline demo: in-memory DB + recorded AI replays
+# Mode pill / getMode() (src/lib/client/mode.ts): MOCK by default until Merge 1; NEXT_PUBLIC_MOCK=0 → LIVE; OFFLINE=1 at build → OFFLINE · REPLAY
 ```
 Environment variables go in `.env.local` (never commit it) and are listed in `docs/plan/02 §3`: `AI_PROVIDER` (default `gemini`), `GEMINI_API_KEY`, `GEMINI_MODEL_VISION`, `GEMINI_MODEL_FAST`, `MONGODB_URI`, `MONGODB_DB`, `OFFLINE`, and the Bedrock vars (used only if Amazon credits arrive).
 
