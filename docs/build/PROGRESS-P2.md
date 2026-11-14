@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 13:20 · **Now working on:** — (Phase 4 code done; waiting for Dharm: Atlas network access, live replay recording, backup video, P2-20 decision) · **Branch:** main
+**Last updated:** Sat 13:20 · **Now working on:** — (Phase 4 code done; waiting for Dharm: Atlas network access, live replay recording, backup video. P2-20 deferred) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -29,7 +29,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-17 | Teacher insight | ✅ | 15421cf | insight.ts + POST /api/class/[code]/insights + phone card "✓ numbers checked". numbersAllowed on bullets, nextMove and groups; unknown nicknames dropped; cache 20 s (longer if the class is unchanged). 21 scripted checks. Real-model wording check needs a key |
 | P2-18 | Results page | ✅ | 23aa53c | Score (first answer per question), accuracy by topic, top mistake + why, time played, coach note + its questions, Play again. GET /api/session/[id]/results; mock/offline-network → this device's record. 19 checks + Chrome (mock) |
 | P2-19 | TTL indexes | ✅ | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"). Confirmed on Atlas: all 4 TTL indexes + the query indexes exist |
-| P2-20 | Classmates | ⬜ | | |
+| P2-20 | Classmates | ⬜ | | Deferred by Dharm: do later (gated on Merge 2). DEVPOST.md adds it as a 5th agent only if it ships |
 | P2-21 | Peri + domain | ⬜ | | |
 | P2-22 | Offline mode | ✅ | 4401929 | OFFLINE=1: memory store seeded from data/replay/seed.json (worksheet + "replay" alias); unrecorded photo → recorded scan (labelled); coach reuses the recorded decision for the same answer, code-checked, else fallback. 17 checks + OFFLINE build/start. Wi-Fi-off run is P2-23 |
 | P2-23 | Record a replay | 🟦 | afb0a2a | scripts/export-replay.ts <CLASS> → data/replay/aiCalls.json + seed.json; 14 round-trip checks (live run → export → offline coach follows it). Still to do: play one demo in live mode, export, Wi-Fi-off test (needs Atlas network access fixed) |
