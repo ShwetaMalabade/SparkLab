@@ -8,7 +8,9 @@ import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { classifyHand } from "../src/motion/hands";
-import { addAtom, MOLECULE_QUESTIONS, moleculeLayout } from "../src/game/molecules";
+import { addAtom, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, moleculeLayout, targetCounts } from "../src/game/molecules";
+import { POURS } from "../src/game/lab/lessons";
+import { isBalanced } from "../src/lib/chem";
 import { reportFps, useQuality, particles } from "../src/three/quality";
 import { checkClip, packFrame, replayClip, type Clip } from "../src/motion/clips";
 import { judge, speciesOf, trapped, atomCounts, trapFormula } from "../src/game/balancer";
@@ -301,6 +303,20 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
   ok("water: a 3rd H rejected (only 2)", !extra.ok && extra.reason === "too_many", extra.message);
   ok("layout: H2O = O + 2 H, CH4 = C + 4 H", moleculeLayout("H2O").map((a) => a.el).join("") === "OHH" && moleculeLayout("CH4").map((a) => a.el).join("") === "CHHHH");
   ok("every demo question's palette contains its elements", MOLECULE_QUESTIONS.every((q) => moleculeLayout(q.formula).every((a) => q.palette.includes(a.el))));
+}
+
+// ---- Lab lessons: every pour equation balanced; every build layout matches its formula ----
+{
+  for (const x of Object.values(POURS)) {
+    const b = isBalanced(x.result.equation);
+    ok(`pour ${x.id}: equation balanced + lowest terms`, b.balanced && b.minimal, JSON.stringify(b.diff));
+  }
+  for (const q of [...ORGANIC_QUESTIONS, ...MOLECULE_QUESTIONS]) {
+    const t = targetCounts(q.formula);
+    const lay: Record<string, number> = {};
+    moleculeLayout(q.formula).forEach((a) => (lay[a.el] = (lay[a.el] ?? 0) + 1));
+    ok(`build ${q.formula}: layout has exactly its atoms`, JSON.stringify(Object.entries(lay).sort()) === JSON.stringify(Object.entries(t).sort()), JSON.stringify(lay));
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

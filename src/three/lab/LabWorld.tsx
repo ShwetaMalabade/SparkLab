@@ -10,6 +10,7 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { MathUtils, Vector3, type Group, type Mesh, type MeshStandardMaterial } from "three";
 import { CH4, CO2, Glass, LabWindow, MoleculeModel, PeriodicPoster, Poster, WATER, Whiteboard } from "./LabProps";
 import { Model, preloadLabModels } from "./Model";
+import { WorldAnchor } from "../WorldLabels";
 import { plankTexture, signTexture, tileTexture } from "./textures";
 
 export type RoomId = "mix" | "titration" | "balance" | "study";
@@ -22,10 +23,10 @@ const T = 0.18; // wall thickness
 const DOOR = 2.0;
 
 export const ROOMS: Room[] = [
-  { id: "mix", name: "Mixing Lab", sub: "precipitates · flames · gases", accent: "#E879F9", tile: ["#E4DAF0", "#B9A8D3"], x0: -10, x1: -1.2, z0: -8, z1: -1.2, doorX: -5.6, doorZ: -1.2 },
-  { id: "titration", name: "Titration Lab", sub: "acids & bases", accent: "#F472B6", tile: ["#F3DCE6", "#D9A9BF"], x0: 1.2, x1: 10, z0: -8, z1: -1.2, doorX: 5.6, doorZ: -1.2 },
-  { id: "balance", name: "Balance Lab", sub: "balancing equations", accent: "#22D3EE", tile: ["#D6EBF1", "#9FC8D6"], x0: -10, x1: -1.2, z0: 1.2, z1: 8, doorX: -5.6, doorZ: 1.2 },
-  { id: "study", name: "Study Room", sub: "number problems", accent: "#A3E635", tile: ["#E8EDD3", "#BFC99A"], x0: 1.2, x1: 10, z0: 1.2, z1: 8, doorX: 5.6, doorZ: 1.2 },
+  { id: "mix", name: "Inorganic Chemistry", sub: "water · salts · reactions", accent: "#E879F9", tile: ["#E4DAF0", "#B9A8D3"], x0: -10, x1: -1.2, z0: -8, z1: -1.2, doorX: -5.6, doorZ: -1.2 },
+  { id: "titration", name: "Acids & Bases", sub: "pH · indicators · fizz", accent: "#F472B6", tile: ["#F3DCE6", "#D9A9BF"], x0: 1.2, x1: 10, z0: -8, z1: -1.2, doorX: 5.6, doorZ: -1.2 },
+  { id: "balance", name: "Organic Chemistry", sub: "carbon molecules", accent: "#22D3EE", tile: ["#D6EBF1", "#9FC8D6"], x0: -10, x1: -1.2, z0: 1.2, z1: 8, doorX: -5.6, doorZ: 1.2 },
+  { id: "study", name: "Physical Chemistry", sub: "coming soon", accent: "#A3E635", tile: ["#E8EDD3", "#BFC99A"], x0: 1.2, x1: 10, z0: 1.2, z1: 8, doorX: 5.6, doorZ: 1.2 },
 ];
 export const roomOf = (id: RoomId) => ROOMS.find((r) => r.id === id)!;
 const inside = (r: Rect, x: number, z: number) => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1;
@@ -82,6 +83,8 @@ export type LabWorldProps = {
   done: RoomId[];
   locked?: RoomId[];
   onArrive: (room: RoomId) => void;
+  /** Walk there by himself (no keys needed): hallway → doorway → inside the room. */
+  autoWalk?: boolean;
 };
 
 /** Where the student stands; kept between visits. */
@@ -120,7 +123,7 @@ export function LabWorld(props: LabWorldProps) {
   );
 }
 
-function Building({ target, done, locked = [], onArrive }: LabWorldProps) {
+function Building({ target, done, locked = [], onArrive, autoWalk = false }: LabWorldProps) {
   return (
     <group>
       <Floors />
@@ -137,7 +140,7 @@ function Building({ target, done, locked = [], onArrive }: LabWorldProps) {
         <DoorSign key={r.id} room={r} active={target === r.id} done={done.includes(r.id)} locked={locked.includes(r.id)} />
       ))}
       {target && <Guide room={roomOf(target)} />}
-      <Player target={target} onArrive={onArrive} />
+      <Player target={target} onArrive={onArrive} autoWalk={autoWalk} />
     </group>
   );
 }
@@ -372,7 +375,17 @@ const KEYS: Record<string, [number, number]> = {
 /** Orbit camera: yaw (radians, 0 = looking from +z), distance. Drag / Q,E / wheel change it. */
 const VIEW = { yaw: Math.atan2(8, 11), dist: 13.6, height: 11 };
 
-function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: RoomId) => void }) {
+/** Waypoints from where he stands to the middle of a room (hallway centre line → doorway → inside). */
+function pathTo(r: Room): [number, number][] {
+  const north = r.z0 < 0;
+  const inZ = north ? r.doorZ - 2.2 : r.doorZ + 2.2;
+  const pts: [number, number][] = [];
+  if (Math.abs(PLAYER.z) > 0.6 && !inside(r, PLAYER.x, PLAYER.z)) pts.push([PLAYER.x, 0]); // back to the hallway line
+  pts.push([r.doorX, 0], [r.doorX, r.doorZ], [r.doorX, inZ]);
+  return pts;
+}
+
+function Player({ target, onArrive, autoWalk }: { target: RoomId | null; onArrive: (room: RoomId) => void; autoWalk: boolean }) {
   const body = useRef<Group>(null);
   const limbs = useRef<{ legs: (Group | null)[]; arms: (Group | null)[] }>({ legs: [], arms: [] });
   const shadow = useRef<Mesh>(null);
@@ -382,11 +395,13 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
   const { camera } = useThree();
   const tmp = useMemo(() => ({ pos: new Vector3(), look: new Vector3(PLAYER.x, 0.6, PLAYER.z) }), []);
   const live = useRef({ target, onArrive });
+  const path = useRef<[number, number][]>([]);
   useEffect(() => {
     live.current = { target, onArrive };
     arrived.current = false;
     inTarget.current = 0;
-  }, [target, onArrive]);
+    path.current = autoWalk && target ? pathTo(roomOf(target)) : [];
+  }, [target, onArrive, autoWalk]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -454,14 +469,28 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
       dx += f * fx + r * -fz;
       dz += f * fz + r * fx;
     });
+    // Auto-walk along the waypoints (keys ignored while he walks by himself).
+    const wp = path.current[0];
+    if (wp) {
+      dx = wp[0] - PLAYER.x;
+      dz = wp[1] - PLAYER.z;
+      if (Math.hypot(dx, dz) < 0.15) {
+        path.current.shift();
+        dx = dz = 0;
+        if (!path.current.length && live.current.target && !arrived.current) {
+          arrived.current = true;
+          live.current.onArrive(live.current.target);
+        }
+      }
+    }
     const len = Math.hypot(dx, dz);
     const moving = len > 0;
     if (moving) {
       const step = 3.2 * dt;
       const nx = PLAYER.x + (dx / len) * step;
       const nz = PLAYER.z + (dz / len) * step;
-      if (!blocked(nx, PLAYER.z)) PLAYER.x = nx;
-      if (!blocked(PLAYER.x, nz)) PLAYER.z = nz;
+      if (wp || !blocked(nx, PLAYER.z)) PLAYER.x = nx;
+      if (wp || !blocked(PLAYER.x, nz)) PLAYER.z = nz;
       let d = Math.atan2(dx, dz) - PLAYER.heading;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       PLAYER.heading += d * Math.min(1, dt * 12);
@@ -537,6 +566,8 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
             </mesh>
           </group>
         ))}
+        {/* anchor for the speech bubble above his head (drawn in the DOM by the page) */}
+        <WorldAnchor id="player:head" position={[0, 2.25, 0]} />
         {/* head */}
         <mesh position={[0, 1.6, 0]} castShadow>
           <sphereGeometry args={[0.27, 28, 22]} />

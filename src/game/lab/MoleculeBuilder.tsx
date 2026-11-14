@@ -334,13 +334,25 @@ function Built({ q, built, done }: { q: MoleculeQuestion; built: string[]; done:
   return (
     <group ref={spin} position={[ZONE_POS.x, ZONE_POS.y + 0.25, ZONE_POS.z]}>
       {done &&
-        slots.slice(1).map((s, i) => {
-          const end = new Vector3(...s.at).multiplyScalar(k);
-          const mid = end.clone().multiplyScalar(0.5);
-          const q4 = new Group().quaternion.setFromUnitVectors(new Vector3(0, 1, 0), end.clone().normalize());
+        slots.slice(1).map((s, j) => {
+          // Bond each atom to its nearest heavy (non-H) atom: works for H2O, CH4 and chains like C2H6 / CH3OH.
+          const i = j + 1;
+          const me = new Vector3(...s.at).multiplyScalar(k);
+          let best = new Vector3(...slots[0].at).multiplyScalar(k), bd = Infinity;
+          slots.forEach((o, n) => {
+            if (n === i || o.el === "H" || (s.el !== "H" && n > i)) return;
+            const p = new Vector3(...o.at).multiplyScalar(k);
+            const d = p.distanceTo(me);
+            if (d < bd) {
+              bd = d;
+              best = p;
+            }
+          });
+          const dir = me.clone().sub(best);
+          const q4 = new Group().quaternion.setFromUnitVectors(new Vector3(0, 1, 0), dir.clone().normalize());
           return (
-            <mesh key={`b${i}`} position={mid} quaternion={q4}>
-              <cylinderGeometry args={[0.05, 0.05, end.length(), 10]} />
+            <mesh key={`b${j}`} position={best.clone().add(me).multiplyScalar(0.5)} quaternion={q4}>
+              <cylinderGeometry args={[0.05, 0.05, dir.length(), 10]} />
               <meshStandardMaterial color="#CBD5E1" />
             </mesh>
           );

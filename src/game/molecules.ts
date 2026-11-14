@@ -15,6 +15,13 @@ export type MoleculeQuestion = {
   fact: string;
 };
 
+/** Organic room: carbon molecules. */
+export const ORGANIC_QUESTIONS: MoleculeQuestion[] = [
+  { id: "o1", prompt: "Build methane, the gas in a Bunsen burner.", formula: "CH4", name: "methane", palette: ["C", "H", "O", "N"], fact: "Carbon makes 4 bonds, so it holds 4 hydrogens in a tetrahedron. Methane is the simplest organic molecule." },
+  { id: "o2", prompt: "Build ethane: two carbons joined together.", formula: "C2H6", name: "ethane", palette: ["C", "H", "O", "N"], fact: "Carbon can bond to carbon. That C–C chain is what all of organic chemistry is built on." },
+  { id: "o3", prompt: "Build methanol, the simplest alcohol.", formula: "CH3OH", name: "methanol", palette: ["C", "H", "O", "N"], fact: "Swap one H in methane for an –OH group and you get an alcohol." },
+];
+
 /** Demo set until the curated list arrives. Distractors are the usual mix-ups. */
 export const MOLECULE_QUESTIONS: MoleculeQuestion[] = [
   { id: "m1", prompt: "What is the formula of water? Build it!", formula: "H2O", name: "water", palette: ["H", "O", "C", "N"], fact: "Two hydrogens bond to one oxygen. The molecule is bent (about 104.5°)." },
@@ -73,6 +80,19 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Where each atom sits in the finished molecule (centre atom first), in molecule units. */
 export function moleculeLayout(formula: string): { el: string; at: [number, number, number] }[] {
+  // Chains (2 heavy atoms): each heavy atom keeps its own hydrogens.
+  if (formula === "C2H6")
+    return [
+      { el: "C", at: [-0.38, 0, 0] }, { el: "C", at: [0.38, 0, 0] },
+      { el: "H", at: [-0.72, 0.38, 0] }, { el: "H", at: [-0.72, -0.25, 0.32] }, { el: "H", at: [-0.72, -0.25, -0.32] },
+      { el: "H", at: [0.72, 0.38, 0] }, { el: "H", at: [0.72, -0.25, 0.32] }, { el: "H", at: [0.72, -0.25, -0.32] },
+    ];
+  if (formula === "CH3OH")
+    return [
+      { el: "C", at: [-0.3, 0, 0] }, { el: "O", at: [0.42, 0.08, 0] },
+      { el: "H", at: [-0.66, 0.38, 0] }, { el: "H", at: [-0.62, -0.28, 0.32] }, { el: "H", at: [-0.62, -0.28, -0.32] },
+      { el: "H", at: [0.8, -0.25, 0] },
+    ];
   const t = targetCounts(formula);
   const els = Object.keys(t);
   // Centre = the element with the fewest atoms that isn't H (O in H2O, C in CO2/CH4, N in NH3).
