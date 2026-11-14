@@ -85,7 +85,11 @@ function Step({ n, e }: { n: number; e: TraceEntry }) {
           🛡️ Code caught it: {r}
         </div>
       ))}
-      {e.replaced && <div className="text-sm text-muted">Code: {e.replaced} was already played, so it served the next unplayed question.</div>}
+      {e.replaced && (
+        <div className="text-sm text-muted">
+          {e.replaced.startsWith("finish") ? "Code: the game can't end before the first answer, so it served the next question." : `Code: ${e.replaced} was already played, so it served the next unplayed question.`}
+        </div>
+      )}
       <div className="text-sm">
         {q ? (
           q.origin === "variant" ? (

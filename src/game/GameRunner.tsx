@@ -88,6 +88,12 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
         entry.replaced = q.id;
         q = worksheet.questions.find((x) => x.origin === "worksheet" && !G.played.includes(x.id));
       }
+      // Never end before the first answer while the worksheet still has questions (e.g. /api/next couldn't find the
+      // worksheet on the server): serve the next unplayed one locally. The trace shows it was code, not the coach.
+      if (!q && !overBudget && G.answeredCount === 0) {
+        q = worksheet.questions.find((x) => x.origin === "worksheet" && !G.played.includes(x.id));
+        if (q) entry.replaced = `finish (${ns.reason})`;
+      }
       entry.served = q ? { id: q.id, origin: q.origin } : null;
       G.setGame({ lastNext: ns, trace: [...G.trace, entry] });
       if (overBudget) return loop.current.finish("time budget used");
