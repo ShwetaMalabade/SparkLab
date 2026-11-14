@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 13:20 · **Now working on:** — (Phase 4 code done; waiting for Dharm: Atlas network access, live replay recording, backup video. P2-20 deferred) · **Branch:** main
+**Last updated:** Sat 14:30 · **Now working on:** — (API + Mongo verified live; waiting for Dharm: replay recording, backup video, quota numbers, Vercel) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -14,19 +14,19 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-02 | Design tokens + layout | ✅ | 2d04bbf | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
 | P2-03 | Paste the tested code | ✅ | 4abe446 | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ✅ | 5407174 | api.ts + types.ts exactly as CONTRACTS §2, mock mode; fixture q1 launcher · q2 balloons · q3 mix lab · q4 balancer; speak.ts; results stub |
-| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Atlas ✓. Gemini key ✓, test-ai `{"ok":true}` on both: vision gemini-3.5-flash (~9 s; 3.7/3.8-flash were 503/timeouts today), fast gemini-3.5-flash-lite (~1 s). Still waiting on Dharm: real RPM/RPD from AI Studio, Vercel env vars |
+| P2-05 | Accounts + quota | ⛔ | 080fcad | Atlas ✓ (Network Access 0.0.0.0/0). Gemini ✓: vision + fast = gemini-3.5-flash-lite, backup gemini-3.1-flash-lite (3.5/3.8-flash timed out or 503'd today). Still waiting on Dharm: real RPM/RPD from AI Studio, Vercel env vars (+ GEMINI_MODEL_BACKUP) |
 | P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
 | P2-07 | Database | ✅ | 0809611 | db.ts (Mongo, cached client, indexes) + memoryDb.ts (OFFLINE=1), same Store interface; classCode.ts. 32 checks vs local Mongo + memory. aggregateClass comes with P2-15 |
-| P2-08 | Agents 1 + 2 | 🟦 | 108515b | prompts.ts (verbatim from 03 §4) + reader.ts + designer.ts done. Still to do: test the prompts on 3 real worksheet photos (needs a Gemini key) |
-| P2-09 | Scan pipeline + `/api/ingest` | 🟦 | c340337 | ingest.ts + route + resizeImage done; 25 checks with fake agents + curl. Done-when (printed sheet → flagged worksheet ≤ 25 s) needs a Gemini key |
+| P2-08 | Agents 1 + 2 | 🟦 | b3f1ee4 | Real model ✓ on a generated printed sheet: reader 3–9 s, all 4 questions, key typo read. Designer prompt/validation fixed for real output (b3f1ee4). Still to do: 3 real worksheet photos |
+| P2-09 | Scan pipeline + `/api/ingest` | ✅ | b3f1ee4 | Done-when ✓ with real Gemini + Atlas: printed sheet → 4 verified questions + answer_key_mismatch:34->35.3 in 15.7–26 s (4 runs, nothing dropped) |
 | P2-10 | Core routes | ✅ | 6d147bd | class, session, session/[id]/end, attempt, worksheet/[id] GET+PATCH (code-only re-check from saved drafts). 32 HTTP checks on Mongo |
 | P2-11 | Landing + Scan pages | ✅ | e981eee | Landing: class on load, QR → /live/<code>, budget picker, Use last scan. Scan: drop/webcam/phone, live steps ≥ 0.6 s, → /play/<wsId>. Checked in Chrome |
-| P2-12 | Coach `/api/next` | 🟦 | ae7ad55 | Code done: coach.ts + route; 22 scripted-coach checks + HTTP on Mongo (fallback ~130 ms). Still to do: try the Director prompt on a real model (needs key) |
+| P2-12 | Coach `/api/next` | ✅ | b3f1ee4 | Real model ✓: 1–4.5 s; after a wrong answer it writes a code-verified new question 6/6 (fixed: it never saw the draft format). Timeouts fall back as designed |
 | P2-13 | Real `nextStep` in `api.ts` | ✅ | f157cd0 | All api.ts calls have a live path (NEXT_PUBLIC_MOCK=0); nextStep 6 s abort → browser fallback; postAttempt queue + 5 s retry. 19 live checks |
 | P2-14 | Review page | ✅ | 6bc7a64 | /review/[wsId]: cards, plain-words flags, AI-named mistakes, edit → code recompute (PATCH), remove (PATCH remove:true). Scan + Use last scan now go here. Checked in Chrome |
 | P2-15 | Class stats `GET /api/class/[code]` | ✅ | ed3f5d9 | ClassStats via $facet (Mongo) / JS (memory), first attempt per student per question; coachFeed from decision rows. 15 checks per store + identical output |
 | P2-16 | Live phone page `/live/[code]` | 🟦 | 61cc03a | Polls 2 s, no toasts on first load, toast + vibrate for real answers only (0.8 s locally), grid/mistakes/bars/coach feed. Done-when needs a deploy: real phone on venue Wi-Fi + cellular |
-| P2-17 | Teacher insight | ✅ | 15421cf | insight.ts + POST /api/class/[code]/insights + phone card "✓ numbers checked". numbersAllowed on bullets, nextMove and groups; unknown nicknames dropped; cache 20 s (longer if the class is unchanged). 21 scripted checks. Real-model wording check needs a key |
+| P2-17 | Teacher insight | ✅ | 15421cf | insight.ts + POST /api/class/[code]/insights + phone card "✓ numbers checked". numbersAllowed on bullets, nextMove and groups; unknown nicknames dropped; cache 20 s (longer if the class is unchanged). 21 scripted checks. Real model ✓ (1–2 s, labels not ids) |
 | P2-18 | Results page | ✅ | 23aa53c | Score (first answer per question), accuracy by topic, top mistake + why, time played, coach note + its questions, Play again. GET /api/session/[id]/results; mock/offline-network → this device's record. 19 checks + Chrome (mock) |
 | P2-19 | TTL indexes | ✅ | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"). Confirmed on Atlas: all 4 TTL indexes + the query indexes exist |
 | P2-20 | Classmates | ⬜ | | Deferred by Dharm: do later (gated on Merge 2). DEVPOST.md adds it as a 5th agent only if it ships |
@@ -48,6 +48,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Real coach questions now arrive (b3f1ee4).** With the real model, a wrong answer usually gets a coach-written question: `origin: "variant"`, ids like `q1v1`, `q4v2`; it can be any template (seen: launcher and balancer). Your P1-15 badge path is the one that runs.
 - **Results page is real (P2-18).** Keep navigating to `/results/<sessionId>` after `endSession()`; it reads the server in live mode and this device's record in mock mode. "Play again" goes to `/play/<the wsId you played>`.
 - **Live mode is ready, still off by default.** `NEXT_PUBLIC_MOCK=0` (at build time) switches api.ts to the real routes. Signatures unchanged. `/play/fixture` still loads the fixture in live mode; a real scan's `/play/<wsId>` loads from the server. We flip it at Merge 1.
 - **Merged your p1/P1-11 into main** (Dharm asked), plus a lint ignore for `public/mediapipe-wasm/**` (MediaPipe's generated JS caused 532 lint problems). Your bundle concern: checked the real Next build, and mathjs is in **no** client chunk.
