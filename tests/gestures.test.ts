@@ -6,6 +6,7 @@ import { subscribe, useGame } from "../src/game/store";
 import { keyToEvent } from "../src/motion/keyboard";
 import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
+import { range, fieldLength, speedForRange, choiceNumber, arc, maxHeight } from "../src/game/physics";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra = "") => {
@@ -160,6 +161,16 @@ ok("3 → pick index 2", k3?.type === "command" && k3.cmd === "pick" && k3.value
 ok("held Enter does not repeat", keyToEvent({ key: "Enter", repeat: true }, 0) === null);
 ok("held ↑ repeats angle", keyToEvent({ key: "ArrowUp", repeat: true }, 0)?.type === "command");
 ok("all keyboard events tagged keyboard", ["Enter", "c", "ArrowLeft", " ", "n", "p"].every((k) => keyToEvent({ key: k, repeat: false }, 0)?.source === "keyboard"));
+
+// ---- Launcher physics (P1-12 Done-when, docs/plan/05 §2) ----
+ok("v=20, θ=30° lands at 35.3 m", range(20, 30).toFixed(1) === "35.3", `${range(20, 30)}`);
+ok("45° goes farthest", [5, 15, 30, 44, 46, 60, 75, 85].every((d) => range(20, d) < range(20, 45)));
+ok("30° and 60° land together", Math.abs(range(20, 30) - range(20, 60)) < 1e-9);
+ok("arc lands at R", Math.abs(arc(20, 30).at(-1)!.x - range(20, 30)) < 1e-9 && Math.abs(arc(20, 30).at(-1)!.y) < 1e-9);
+ok("arc peak = H", Math.abs(Math.max(...arc(20, 30, 200).map((p) => p.y)) - maxHeight(20, 30)) < 0.01);
+ok("ghost speed lands at the wrong value", Math.abs(range(speedForRange(20.4, 30), 30) - 20.4) < 1e-9);
+ok("field: v=20 → 50 m, free speed → 100 m", fieldLength(20) === 50 && fieldLength(null) === 100);
+ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("White solid forms") === null);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

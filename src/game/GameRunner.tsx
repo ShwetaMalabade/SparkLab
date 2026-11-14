@@ -15,6 +15,7 @@ import type { TWorksheet } from "@/lib/schema";
 import { Arena } from "@/three/Arena";
 import { Avatar } from "@/three/Avatar";
 import { HandCursors } from "@/three/HandCursor";
+import { WorldLabelsLayer } from "@/three/WorldLabels";
 import { GameHud } from "./GameHud";
 import { buildAttempt, scoreAnswer } from "./scoring";
 import { subscribe, useGame, type GameSession, type LockResult, type Phase } from "./store";
@@ -81,7 +82,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
       nextResult.current = null;
       waitingForNext.current = false;
       G.resetArming();
-      G.setGame({ question: q, played: [...G.played, q.id], caption: q.prompt, coachLine: null, lastResult: null });
+      G.setGame({ question: q, played: [...G.played, q.id], caption: q.prompt, coachLine: null, lastResult: null, templateHint: null, skipHandler: null });
       loop.current.setPhase("intro");
       sayNow(q.origin === "variant" ? `New question from your coach. ${q.prompt}` : q.prompt);
     },
@@ -138,6 +139,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
         case "intro":
           return loop.current.setPhase("play");
         case "play":
+          if (G.skipHandler?.()) return; // the template used N for its own sub-phase
           lockToken.current++;
           stopSpeaking();
           return void loop.current.request({ sessionId: session.sessionId });
@@ -225,18 +227,21 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
   const tpl = question ? pickTemplate(question) : null;
   const accent = question?.subject === "chemistry" ? CHEMISTRY : PHYSICS;
   const onLock = (r: LockResult) => loop.current.lock(r);
-  const still = phase === "play"; // no camera sway while aiming at targets
+  const still = phase === "play" || !!tpl?.def.still; // no camera sway while aiming at targets
+  const templateHint = useGame((s) => s.templateHint);
+  const avatar = tpl?.def.avatar ?? { position: [0, -0.2, -2.2] as [number, number, number], scale: 0.9 };
 
   return (
     <div className="fixed inset-0 overflow-hidden">
       <Arena accent={accent} still={still}>
-        <Avatar color={accent} position={[0, -0.2, -2.2]} scale={0.9} />
-        {question && tpl?.def.Scene && <tpl.def.Scene question={question} phase={phase} paused={paused} onLock={onLock} />}
+        <Avatar color={accent} position={avatar.position} scale={avatar.scale} />
+        {question && tpl?.def.Scene && <tpl.def.Scene key={question.id} question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />}
       </Arena>
-      {question && tpl && <tpl.def.Overlay question={question} phase={phase} paused={paused} onLock={onLock} />}
+      <WorldLabelsLayer />
+      {question && tpl && <tpl.def.Overlay key={question.id} question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />}
       <GameHud
         accent={accent}
-        hint={phase === "next" ? "Raise both hands (or Enter) for the next question" : tpl ? tpl.def.hint(question!) : ""}
+        hint={phase === "next" ? "Raise both hands (or Enter) for the next question" : templateHint ?? (tpl ? tpl.def.hint(question!) : "")}
         phaseMs={phaseMs}
         total={worksheet.questions.length}
       />

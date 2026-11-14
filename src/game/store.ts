@@ -69,6 +69,13 @@ export type GameSlice = {
   lastResult: (LockResult & { points: number }) | null;
   caption: string;
   coachLine: string | null;
+  /** Template-specific hint (e.g. the Launcher's experiment line); null → the template's default. */
+  templateHint: string | null;
+  /**
+   * A template sub-phase can claim the N key first (e.g. "skip the test shots, go to the answers").
+   * Returns true when it handled the skip; otherwise GameRunner skips the whole question.
+   */
+  skipHandler: (() => boolean) | null;
   setGame: (p: Partial<GameSlice>) => void;
   resetGame: () => void;
 };
@@ -76,7 +83,7 @@ export type GameSlice = {
 const GAME_INITIAL = {
   session: null, question: null, phase: "intro" as Phase, paused: false, pauseReason: null,
   score: 0, streak: 0, correctCount: 0, answeredCount: 0, played: [], lastNext: null, trace: [],
-  lastResult: null, caption: "", coachLine: null,
+  lastResult: null, caption: "", coachLine: null, templateHint: null, skipHandler: null,
 } satisfies Omit<GameSlice, "setGame" | "resetGame">;
 
 export const useGame = create<MotionSlice & GameSlice>()((set, get) => ({
