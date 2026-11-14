@@ -14,7 +14,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-02 | Design tokens + layout | ✅ | 2d04bbf | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
 | P2-03 | Paste the tested code | ✅ | 4abe446 | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ✅ | 5407174 | api.ts + types.ts exactly as CONTRACTS §2, mock mode; fixture q1 launcher · q2 balloons · q3 mix lab · q4 balancer; speak.ts; results stub |
-| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Atlas cluster ✓ (connects in <1 s, round trip + $facet ok). Still waiting on Dharm: AI Studio key + model names + real RPM/RPD, Vercel env vars |
+| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Atlas ✓. Gemini key ✓, test-ai `{"ok":true}` on both: vision gemini-3.5-flash (~9 s; 3.7/3.8-flash were 503/timeouts today), fast gemini-3.5-flash-lite (~1 s). Still waiting on Dharm: real RPM/RPD from AI Studio, Vercel env vars |
 | P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
 | P2-07 | Database | ✅ | 0809611 | db.ts (Mongo, cached client, indexes) + memoryDb.ts (OFFLINE=1), same Store interface; classCode.ts. 32 checks vs local Mongo + memory. aggregateClass comes with P2-15 |
 | P2-08 | Agents 1 + 2 | 🟦 | 108515b | prompts.ts (verbatim from 03 §4) + reader.ts + designer.ts done. Still to do: test the prompts on 3 real worksheet photos (needs a Gemini key) |
