@@ -55,9 +55,11 @@ function promptInput(s: ClassStats) {
     ofStudents: s.ofStudents,
     questions: s.questions,
     students: s.students.map(({ nickname, simulated, profile, live, answers, variants, score }) => ({ nickname, simulated, profile, live, answers, variants, score })),
-    topMistakes: s.topMistakes,
+    // Labels only: with the ids in view the model wrote "forgot_double_angle" to the teacher (real output, 2026-11-14).
+    topMistakes: s.topMistakes.map(({ label, students, ofStudents, nicknames }) => ({ label, students, ofStudents, nicknames })),
     latest: s.latest.map(({ at, ...rest }) => (void at, rest)),
-    coachReasons: s.coachFeed.map((c) => ({ nickname: c.nickname, reason: c.reason, wroteVariant: c.variant, codeRejected: c.rejected })),
+    // Coach decisions only: fallback rows are code's "next question" notes (timeouts etc.), not something to tell a teacher.
+    coachReasons: s.coachFeed.filter((c) => !c.fallback).map((c) => ({ nickname: c.nickname, reason: c.reason, wroteVariant: c.variant, codeRejected: c.rejected })),
   };
 }
 
@@ -78,7 +80,7 @@ export function checkInsight(out: TInsightOut, stats: ClassStats, labels: string
   const known = new Set(stats.students.map((s) => s.nickname));
   const groups = out.groups.flatMap((gr) => {
     if (!ok(gr.name) || !ok(gr.mistake)) return replaced++, [];
-    const students = gr.students.filter((n) => known.has(n));
+    const students = [...new Set(gr.students.filter((n) => known.has(n)))];
     return students.length ? [{ name: gr.name, students, mistake: gr.mistake }] : [];
   });
 

@@ -1,6 +1,6 @@
 {
   "id": "ws_fixture",
-  "title": "Dev fixture (code-assembled)",
+  "title": "Chemistry Lab Warm-up (dev fixture)",
   "source": "generated",
   "imageHash": null,
   "questions": [
@@ -8,136 +8,752 @@
       "id": "q1",
       "origin": "worksheet",
       "parentId": null,
-      "subject": "physics",
-      "topic": "projectile_motion",
-      "concept": "range uses sin 2θ",
-      "template": "projectile_launcher",
+      "subject": "chemistry",
+      "topic": "acid_base_ph",
+      "concept": "titration end point",
+      "template": "titration_lab",
       "params": {
-        "lock": "speed"
+        "lock": "none"
       },
-      "prompt": "A ball is launched at 20 m/s at 30° above level ground. How far does it travel?",
+      "prompt": "20.0 mL of 0.150 M acetic acid (CH₃COOH) is titrated with 0.100 M NaOH using phenolphthalein. What volume of NaOH reaches the end point?",
       "given": {
-        "v": {
+        "Ma": {
+          "value": 0.15,
+          "unit": "M"
+        },
+        "Va": {
           "value": 20,
-          "unit": "m/s"
+          "unit": "mL"
         },
-        "theta": {
-          "value": 30,
-          "unit": "deg"
-        },
-        "g": {
-          "value": 9.81,
-          "unit": "m/s^2"
+        "Mt": {
+          "value": 0.1,
+          "unit": "M"
         }
       },
-      "formula": "v^2*sin(2*theta*pi/180)/g",
+      "formula": "Ma*Va/Mt",
       "answer": {
-        "value": 35.311943069701876,
-        "unit": "m",
-        "text": "35.3 m"
+        "value": 30,
+        "unit": "mL",
+        "text": "30.0 mL"
       },
       "reaction": null,
       "equation": null,
+      "titration": {
+        "ask": "endpoint_ml",
+        "analyte": {
+          "formula": "CH3COOH",
+          "name": "acetic acid",
+          "volumeML": 20,
+          "molarity": 0.15
+        },
+        "titrant": {
+          "formula": "NaOH",
+          "name": "sodium hydroxide",
+          "molarity": 0.1
+        },
+        "indicator": "phenolphthalein",
+        "indicatorInfo": {
+          "name": "phenolphthalein",
+          "low": 8.2,
+          "high": 10,
+          "acid": "#F8FAFC",
+          "base": "#E0218A",
+          "acidLabel": "colorless",
+          "baseLabel": "pink"
+        },
+        "equivalenceML": 30,
+        "startPH": 2.79,
+        "endPH": 8.76,
+        "curve": [
+          {
+            "ml": 0,
+            "pH": 2.79
+          },
+          {
+            "ml": 0.5,
+            "pH": 3.1
+          },
+          {
+            "ml": 1,
+            "pH": 3.32
+          },
+          {
+            "ml": 1.5,
+            "pH": 3.49
+          },
+          {
+            "ml": 2,
+            "pH": 3.61
+          },
+          {
+            "ml": 2.5,
+            "pH": 3.71
+          },
+          {
+            "ml": 3,
+            "pH": 3.8
+          },
+          {
+            "ml": 3.5,
+            "pH": 3.87
+          },
+          {
+            "ml": 4,
+            "pH": 3.94
+          },
+          {
+            "ml": 4.5,
+            "pH": 3.99
+          },
+          {
+            "ml": 5,
+            "pH": 4.05
+          },
+          {
+            "ml": 5.5,
+            "pH": 4.1
+          },
+          {
+            "ml": 6,
+            "pH": 4.14
+          },
+          {
+            "ml": 6.5,
+            "pH": 4.19
+          },
+          {
+            "ml": 7,
+            "pH": 4.23
+          },
+          {
+            "ml": 7.5,
+            "pH": 4.27
+          },
+          {
+            "ml": 8,
+            "pH": 4.31
+          },
+          {
+            "ml": 8.5,
+            "pH": 4.34
+          },
+          {
+            "ml": 9,
+            "pH": 4.38
+          },
+          {
+            "ml": 9.5,
+            "pH": 4.41
+          },
+          {
+            "ml": 10,
+            "pH": 4.44
+          },
+          {
+            "ml": 10.5,
+            "pH": 4.48
+          },
+          {
+            "ml": 11,
+            "pH": 4.51
+          },
+          {
+            "ml": 11.5,
+            "pH": 4.54
+          },
+          {
+            "ml": 12,
+            "pH": 4.57
+          },
+          {
+            "ml": 12.5,
+            "pH": 4.6
+          },
+          {
+            "ml": 13,
+            "pH": 4.63
+          },
+          {
+            "ml": 13.5,
+            "pH": 4.66
+          },
+          {
+            "ml": 14,
+            "pH": 4.69
+          },
+          {
+            "ml": 14.5,
+            "pH": 4.72
+          },
+          {
+            "ml": 15,
+            "pH": 4.75
+          },
+          {
+            "ml": 15.5,
+            "pH": 4.77
+          },
+          {
+            "ml": 16,
+            "pH": 4.8
+          },
+          {
+            "ml": 16.5,
+            "pH": 4.83
+          },
+          {
+            "ml": 17,
+            "pH": 4.86
+          },
+          {
+            "ml": 17.5,
+            "pH": 4.89
+          },
+          {
+            "ml": 18,
+            "pH": 4.92
+          },
+          {
+            "ml": 18.5,
+            "pH": 4.95
+          },
+          {
+            "ml": 19,
+            "pH": 4.98
+          },
+          {
+            "ml": 19.5,
+            "pH": 5.01
+          },
+          {
+            "ml": 20,
+            "pH": 5.05
+          },
+          {
+            "ml": 20.5,
+            "pH": 5.08
+          },
+          {
+            "ml": 21,
+            "pH": 5.11
+          },
+          {
+            "ml": 21.5,
+            "pH": 5.15
+          },
+          {
+            "ml": 22,
+            "pH": 5.18
+          },
+          {
+            "ml": 22.5,
+            "pH": 5.22
+          },
+          {
+            "ml": 23,
+            "pH": 5.26
+          },
+          {
+            "ml": 23.5,
+            "pH": 5.3
+          },
+          {
+            "ml": 24,
+            "pH": 5.35
+          },
+          {
+            "ml": 24.5,
+            "pH": 5.39
+          },
+          {
+            "ml": 25,
+            "pH": 5.44
+          },
+          {
+            "ml": 25.5,
+            "pH": 5.5
+          },
+          {
+            "ml": 26,
+            "pH": 5.56
+          },
+          {
+            "ml": 26.5,
+            "pH": 5.62
+          },
+          {
+            "ml": 27,
+            "pH": 5.7
+          },
+          {
+            "ml": 27.5,
+            "pH": 5.79
+          },
+          {
+            "ml": 28,
+            "pH": 5.89
+          },
+          {
+            "ml": 28.5,
+            "pH": 6.02
+          },
+          {
+            "ml": 28.65,
+            "pH": 6.07
+          },
+          {
+            "ml": 28.8,
+            "pH": 6.13
+          },
+          {
+            "ml": 28.95,
+            "pH": 6.19
+          },
+          {
+            "ml": 29,
+            "pH": 6.21
+          },
+          {
+            "ml": 29.1,
+            "pH": 6.25
+          },
+          {
+            "ml": 29.25,
+            "pH": 6.34
+          },
+          {
+            "ml": 29.4,
+            "pH": 6.44
+          },
+          {
+            "ml": 29.5,
+            "pH": 6.52
+          },
+          {
+            "ml": 29.55,
+            "pH": 6.56
+          },
+          {
+            "ml": 29.7,
+            "pH": 6.74
+          },
+          {
+            "ml": 29.85,
+            "pH": 7.04
+          },
+          {
+            "ml": 30,
+            "pH": 8.76
+          },
+          {
+            "ml": 30.15,
+            "pH": 10.48
+          },
+          {
+            "ml": 30.3,
+            "pH": 10.78
+          },
+          {
+            "ml": 30.45,
+            "pH": 10.95
+          },
+          {
+            "ml": 30.5,
+            "pH": 11
+          },
+          {
+            "ml": 30.6,
+            "pH": 11.07
+          },
+          {
+            "ml": 30.75,
+            "pH": 11.17
+          },
+          {
+            "ml": 30.9,
+            "pH": 11.25
+          },
+          {
+            "ml": 31,
+            "pH": 11.29
+          },
+          {
+            "ml": 31.05,
+            "pH": 11.31
+          },
+          {
+            "ml": 31.2,
+            "pH": 11.37
+          },
+          {
+            "ml": 31.35,
+            "pH": 11.42
+          },
+          {
+            "ml": 31.5,
+            "pH": 11.46
+          },
+          {
+            "ml": 32,
+            "pH": 11.59
+          },
+          {
+            "ml": 32.5,
+            "pH": 11.68
+          },
+          {
+            "ml": 33,
+            "pH": 11.75
+          },
+          {
+            "ml": 33.5,
+            "pH": 11.82
+          },
+          {
+            "ml": 34,
+            "pH": 11.87
+          },
+          {
+            "ml": 34.5,
+            "pH": 11.92
+          },
+          {
+            "ml": 35,
+            "pH": 11.96
+          },
+          {
+            "ml": 35.5,
+            "pH": 12
+          },
+          {
+            "ml": 36,
+            "pH": 12.03
+          },
+          {
+            "ml": 36.5,
+            "pH": 12.06
+          },
+          {
+            "ml": 37,
+            "pH": 12.09
+          },
+          {
+            "ml": 37.5,
+            "pH": 12.12
+          },
+          {
+            "ml": 38,
+            "pH": 12.14
+          },
+          {
+            "ml": 38.5,
+            "pH": 12.16
+          },
+          {
+            "ml": 39,
+            "pH": 12.18
+          },
+          {
+            "ml": 39.5,
+            "pH": 12.2
+          },
+          {
+            "ml": 40,
+            "pH": 12.22
+          },
+          {
+            "ml": 40.5,
+            "pH": 12.24
+          },
+          {
+            "ml": 41,
+            "pH": 12.26
+          },
+          {
+            "ml": 41.5,
+            "pH": 12.27
+          },
+          {
+            "ml": 42,
+            "pH": 12.29
+          },
+          {
+            "ml": 42.5,
+            "pH": 12.3
+          },
+          {
+            "ml": 43,
+            "pH": 12.31
+          },
+          {
+            "ml": 43.5,
+            "pH": 12.33
+          },
+          {
+            "ml": 44,
+            "pH": 12.34
+          },
+          {
+            "ml": 44.5,
+            "pH": 12.35
+          },
+          {
+            "ml": 45,
+            "pH": 12.36
+          },
+          {
+            "ml": 45.5,
+            "pH": 12.37
+          },
+          {
+            "ml": 46,
+            "pH": 12.38
+          },
+          {
+            "ml": 46.5,
+            "pH": 12.39
+          },
+          {
+            "ml": 47,
+            "pH": 12.4
+          },
+          {
+            "ml": 47.5,
+            "pH": 12.41
+          },
+          {
+            "ml": 48,
+            "pH": 12.42
+          },
+          {
+            "ml": 48.5,
+            "pH": 12.43
+          },
+          {
+            "ml": 49,
+            "pH": 12.44
+          },
+          {
+            "ml": 49.5,
+            "pH": 12.45
+          },
+          {
+            "ml": 50,
+            "pH": 12.46
+          },
+          {
+            "ml": 50.5,
+            "pH": 12.46
+          },
+          {
+            "ml": 51,
+            "pH": 12.47
+          },
+          {
+            "ml": 51.5,
+            "pH": 12.48
+          },
+          {
+            "ml": 52,
+            "pH": 12.49
+          },
+          {
+            "ml": 52.5,
+            "pH": 12.49
+          },
+          {
+            "ml": 53,
+            "pH": 12.5
+          },
+          {
+            "ml": 53.5,
+            "pH": 12.5
+          },
+          {
+            "ml": 54,
+            "pH": 12.51
+          },
+          {
+            "ml": 54.5,
+            "pH": 12.52
+          },
+          {
+            "ml": 55,
+            "pH": 12.52
+          },
+          {
+            "ml": 55.5,
+            "pH": 12.53
+          },
+          {
+            "ml": 56,
+            "pH": 12.53
+          },
+          {
+            "ml": 56.5,
+            "pH": 12.54
+          },
+          {
+            "ml": 57,
+            "pH": 12.54
+          },
+          {
+            "ml": 57.5,
+            "pH": 12.55
+          },
+          {
+            "ml": 58,
+            "pH": 12.56
+          },
+          {
+            "ml": 58.5,
+            "pH": 12.56
+          },
+          {
+            "ml": 59,
+            "pH": 12.56
+          },
+          {
+            "ml": 59.5,
+            "pH": 12.57
+          },
+          {
+            "ml": 60,
+            "pH": 12.57
+          }
+        ]
+      },
+      "mystery": null,
       "choices": [
         {
           "id": "A",
-          "text": "17.7 m",
+          "text": "20.0 mL",
           "correct": false,
-          "misconceptionId": "lost_factor_2",
-          "why": "That lost the 2."
+          "misconceptionId": "assumed_equal_volumes",
+          "why": "Equal volumes only work for equal molarities."
         },
         {
           "id": "B",
-          "text": "35.3 m",
+          "text": "30.0 mL",
           "correct": true,
           "misconceptionId": null,
-          "why": "R = v² sin 2θ / g ≈ 35.3 m."
+          "why": "0.150 × 20.0 ÷ 0.100 = 30.0 mL of NaOH."
         },
         {
           "id": "C",
-          "text": "70.6 m",
+          "text": "60.0 mL",
           "correct": false,
-          "misconceptionId": "doubled_range",
-          "why": "That's double the range."
+          "misconceptionId": "treated_as_diprotic",
+          "why": "Acetic acid has one acidic H."
         },
         {
           "id": "D",
-          "text": "20.4 m",
+          "text": "13.3 mL",
           "correct": false,
-          "misconceptionId": "sin_theta_not_sin_2theta",
-          "why": "That used sin 30° instead of sin 60°."
+          "misconceptionId": "inverted_molarity_ratio",
+          "why": "That flipped the molarities."
         }
       ],
-      "flags": [
-        "answer_key_mismatch:34->35.3"
-      ]
+      "flags": []
     },
     {
       "id": "q2",
       "origin": "worksheet",
       "parentId": null,
-      "subject": "physics",
-      "topic": "newtons_second_law",
-      "concept": "net force with friction",
-      "template": "answer_balloons",
+      "subject": "chemistry",
+      "topic": "other_chemistry",
+      "concept": "identify ions with tests",
+      "template": "mystery_sample",
       "params": {
         "lock": "none"
       },
-      "prompt": "A 10 kg crate is pushed with 50 N; friction coefficient 0.2. Acceleration?",
-      "given": {
-        "F": {
-          "value": 50,
-          "unit": "N"
-        },
-        "m": {
-          "value": 10,
-          "unit": "kg"
-        },
-        "mu": {
-          "value": 0.2,
-          "unit": ""
-        },
-        "g": {
-          "value": 9.81,
-          "unit": "m/s^2"
-        }
-      },
-      "formula": "(F - mu*m*g)/m",
+      "prompt": "Sample X is a white solid. Run the tests on the bench and identify it.",
+      "given": {},
+      "formula": null,
       "answer": {
-        "value": 3.038,
-        "unit": "m/s²",
-        "text": "3.04 m/s²"
+        "value": null,
+        "unit": null,
+        "text": "potassium chloride (KCl)"
       },
       "reaction": null,
       "equation": null,
+      "titration": null,
+      "mystery": {
+        "compound": {
+          "formula": "KCl",
+          "name": "potassium chloride"
+        },
+        "tests": [
+          {
+            "test": "flame",
+            "label": "Flame test",
+            "detail": "Dip the wire loop in the sample and hold it in the Bunsen flame",
+            "effect": "flame",
+            "color": "#B57EDC",
+            "text": "Lilac flame"
+          },
+          {
+            "test": "naoh",
+            "label": "Sodium hydroxide",
+            "detail": "Add a few drops of NaOH solution",
+            "effect": "none",
+            "color": null,
+            "text": "No precipitate"
+          },
+          {
+            "test": "agno3",
+            "label": "Silver nitrate",
+            "detail": "Add dilute nitric acid, then a few drops of AgNO₃",
+            "effect": "precipitate",
+            "color": "#F5F5F5",
+            "text": "White precipitate"
+          },
+          {
+            "test": "bacl2",
+            "label": "Barium chloride",
+            "detail": "Add dilute hydrochloric acid, then a few drops of BaCl₂",
+            "effect": "none",
+            "color": null,
+            "text": "No precipitate"
+          },
+          {
+            "test": "hcl",
+            "label": "Dilute acid",
+            "detail": "Add dilute hydrochloric acid",
+            "effect": "none",
+            "color": null,
+            "text": "No fizzing"
+          }
+        ]
+      },
       "choices": [
         {
           "id": "A",
-          "text": "0.310 m/s²",
+          "text": "calcium chloride (CaCl2)",
           "correct": false,
-          "misconceptionId": "mass_weight_confusion",
-          "why": "That divided by weight."
+          "misconceptionId": "hydroxide_color_mixup",
+          "why": "With NaOH, copper(II) is blue, iron(II) green and iron(III) orange-brown."
         },
         {
           "id": "B",
-          "text": "3.04 m/s²",
+          "text": "potassium chloride (KCl)",
           "correct": true,
           "misconceptionId": null,
-          "why": "Net force 30.4 N ÷ 10 kg."
+          "why": "Lilac flame = K⁺; white precipitate with AgNO₃ = Cl⁻."
         },
         {
           "id": "C",
-          "text": "5.00 m/s²",
+          "text": "potassium bromide (KBr)",
           "correct": false,
-          "misconceptionId": "ignored_friction",
-          "why": "That ignores friction."
+          "misconceptionId": "halide_color_mixup",
+          "why": "With silver nitrate, chloride is white, bromide is cream and iodide is yellow."
         },
         {
           "id": "D",
-          "text": "6.96 m/s²",
+          "text": "lithium chloride (LiCl)",
           "correct": false,
-          "misconceptionId": "added_friction",
-          "why": "Friction was added."
+          "misconceptionId": "flame_color_mixup",
+          "why": "Each metal ion gives its own flame color; compare the color to the flame test chart."
         }
       ],
       "flags": []
@@ -200,6 +816,8 @@
         "hazard": "Lead compounds are toxic"
       },
       "equation": null,
+      "titration": null,
+      "mystery": null,
       "choices": [
         {
           "id": "A",
@@ -253,6 +871,8 @@
       },
       "reaction": null,
       "equation": "2H2 + O2 -> 2H2O",
+      "titration": null,
+      "mystery": null,
       "choices": [
         {
           "id": "A",
@@ -284,44 +904,118 @@
         }
       ],
       "flags": []
+    },
+    {
+      "id": "q5",
+      "origin": "worksheet",
+      "parentId": null,
+      "subject": "chemistry",
+      "topic": "stoichiometry",
+      "concept": "mass-to-mass stoichiometry",
+      "template": "answer_balloons",
+      "params": {
+        "lock": "none"
+      },
+      "prompt": "Mg + 2HCl → MgCl₂ + H₂. What mass of hydrogen gas forms from 2.43 g of magnesium? (Mg = 24.3 g/mol, H₂ = 2.016 g/mol)",
+      "given": {
+        "m": {
+          "value": 2.43,
+          "unit": "g"
+        },
+        "MMg": {
+          "value": 24.3,
+          "unit": "g/mol"
+        },
+        "MH2": {
+          "value": 2.016,
+          "unit": "g/mol"
+        }
+      },
+      "formula": "m/MMg*MH2",
+      "answer": {
+        "value": 0.2016,
+        "unit": "g",
+        "text": "0.202 g"
+      },
+      "reaction": null,
+      "equation": null,
+      "titration": null,
+      "mystery": null,
+      "choices": [
+        {
+          "id": "A",
+          "text": "0.100 g",
+          "correct": false,
+          "misconceptionId": "stopped_at_moles",
+          "why": "0.100 is moles; multiply by 2.016 g/mol."
+        },
+        {
+          "id": "B",
+          "text": "0.403 g",
+          "correct": false,
+          "misconceptionId": "used_hcl_coefficient",
+          "why": "The 2 belongs to HCl."
+        },
+        {
+          "id": "C",
+          "text": "0.202 g",
+          "correct": true,
+          "misconceptionId": null,
+          "why": "2.43 g ÷ 24.3 = 0.100 mol Mg = 0.100 mol H₂ × 2.016 = 0.202 g."
+        },
+        {
+          "id": "D",
+          "text": "29.3 g",
+          "correct": false,
+          "misconceptionId": "inverted_molar_masses",
+          "why": "Divide by Mg's molar mass."
+        }
+      ],
+      "flags": []
     }
   ],
   "misconceptions": [
     {
-      "id": "sin_theta_not_sin_2theta",
-      "label": "Used sin θ instead of sin 2θ",
-      "why": "Range uses sin(2θ).",
-      "concept": "range"
+      "id": "inverted_molarity_ratio",
+      "label": "Flipped the molarity ratio",
+      "why": "V(NaOH) = M(acid)·V(acid) ÷ M(NaOH).",
+      "concept": "titration end point"
     },
     {
-      "id": "lost_factor_2",
-      "label": "Dropped the 2 in 2sinθcosθ",
-      "why": "sin 2θ = 2 sinθ cosθ.",
-      "concept": "range"
+      "id": "assumed_equal_volumes",
+      "label": "Assumed equal volumes",
+      "why": "Equal volumes only work when the molarities match.",
+      "concept": "titration end point"
     },
     {
-      "id": "doubled_range",
-      "label": "Doubled the range",
-      "why": "The ball lands once.",
-      "concept": "range"
+      "id": "treated_as_diprotic",
+      "label": "Treated a 1:1 acid as 2:1",
+      "why": "Acetic acid gives one H⁺ per molecule.",
+      "concept": "titration end point"
     },
     {
-      "id": "ignored_friction",
-      "label": "Ignored friction",
-      "why": "Friction pushes back.",
-      "concept": "net force"
+      "id": "halved_mole_ratio",
+      "label": "Halved the mole ratio",
+      "why": "1 mol NaOH neutralizes 1 mol acetic acid.",
+      "concept": "titration end point"
     },
     {
-      "id": "added_friction",
-      "label": "Added friction",
-      "why": "Friction reduces net force.",
-      "concept": "net force"
+      "id": "halide_color_mixup",
+      "label": "Mixed up the halide precipitates",
+      "why": "With silver nitrate, chloride is white, bromide is cream and iodide is yellow.",
+      "concept": "silver nitrate identifies halide ions"
     },
     {
-      "id": "mass_weight_confusion",
-      "label": "Mixed up mass and weight",
-      "why": "Divide by mass, not weight.",
-      "concept": "net force"
+      "id": "flame_color_mixup",
+      "label": "Mixed up flame colors",
+      "why": "Each metal ion gives its own flame color; compare the color to the flame test chart.",
+      "concept": "flame tests identify metal ions"
+    },
+    {
+      "id": "hydroxide_color_mixup",
+      "label": "Mixed up the hydroxide precipitates",
+      "why": "With NaOH, copper(II) is blue, iron(II) green and iron(III) orange-brown.",
+      "concept": "sodium hydroxide identifies metal ions"
     },
     {
       "id": "gas_vs_precipitate",
@@ -358,7 +1052,25 @@
       "label": "Changed subscripts",
       "why": "That's a different chemical.",
       "concept": "balancing"
+    },
+    {
+      "id": "stopped_at_moles",
+      "label": "Stopped at moles",
+      "why": "Multiply moles of H₂ by its molar mass to get grams.",
+      "concept": "mass-to-mass stoichiometry"
+    },
+    {
+      "id": "used_hcl_coefficient",
+      "label": "Used HCl's coefficient",
+      "why": "Mg and H₂ are 1:1; the 2 belongs to HCl.",
+      "concept": "mass-to-mass stoichiometry"
+    },
+    {
+      "id": "inverted_molar_masses",
+      "label": "Flipped the molar masses",
+      "why": "Divide by Mg's molar mass, multiply by H₂'s.",
+      "concept": "mass-to-mass stoichiometry"
     }
   ],
-  "createdAt": "2026-11-14T07:48:44.175Z"
+  "createdAt": "2026-11-14T19:58:54.073Z"
 }

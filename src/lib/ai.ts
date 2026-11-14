@@ -64,15 +64,23 @@ export async function askJSON<T>(agent: Agent, schema: ZodType<T>, prompt: strin
   }
 
   let raw = ""; let error = ""; let issues: string[] = [];
+  // Gemini's "high demand" spikes (503 UNAVAILABLE) came in bursts on 2026-11-14, so a busy model's one retry goes
+  // to GEMINI_MODEL_BACKUP when it's set (no wait; even the coach gets it if there's time). A 429 waits 2 s, as before.
+  let used = model;
+  const backup = process.env.AI_PROVIDER === "bedrock" ? undefined : process.env.GEMINI_MODEL_BACKUP;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const call = process.env.AI_PROVIDER === "bedrock" ? callBedrock : callGemini;
-      raw = await withTimeout(call(model, prompt, TEMP[agent], opts.image), TIMEOUT[agent]);
+      const budget = attempt === 0 ? TIMEOUT[agent] : Math.max(TIMEOUT[agent] - (Date.now() - t0), agent === "director" ? 0 : 10000);
+      raw = await withTimeout(call(used, prompt, TEMP[agent], opts.image), budget);
       error = ""; break;
     } catch (e: any) {
       error = String(e?.message ?? e);
       const is429 = e?.status === 429 || /429|RESOURCE_EXHAUSTED|Throttling/i.test(error);
-      if (is429 && attempt === 0 && agent !== "director") { await new Promise((r) => setTimeout(r, 2000)); continue; }
+      const busy = e?.status === 503 || /503|UNAVAILABLE|high demand|overloaded/i.test(error);
+      if (attempt > 0) break;
+      if (busy && backup && backup !== used && (agent !== "director" || Date.now() - t0 < 2500)) { used = backup; continue; }
+      if ((is429 || busy) && agent !== "director") { await new Promise((r) => setTimeout(r, 2000)); continue; }
       break;
     }
   }
@@ -84,7 +92,7 @@ export async function askJSON<T>(agent: Agent, schema: ZodType<T>, prompt: strin
     } catch { error = "not JSON"; }
   }
   const ms = Date.now() - t0;
-  await db.log({ agent, model, inputHash, ms, ok: !error, error: error || null, outputJson: data ?? null,
+  await db.log({ agent, model: used, inputHash, ms, ok: !error, error: error || null, outputJson: data ?? null,
     classCode: opts.ctx?.classCode ?? null, sessionId: opts.ctx?.sessionId ?? null, reason: opts.ctx?.reason ?? null }).catch(() => {});
   return data !== undefined ? { ok: true, data, ms, cached: false } : { ok: false, error, issues, raw: raw.slice(0, 4000), ms };
 }

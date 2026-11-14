@@ -1,7 +1,7 @@
 // src/lib/coach.ts — what /api/next does after every answer (docs/plan/03 §9). Server-only.
 // The coach (Agent 4) PROPOSES the next step; applyDirector() and assemble() decide what is allowed.
 // Any failure (timeout, bad JSON, invalid choice, a variant that fails code) → the code fallback.
-import type { z } from "zod";
+import { z } from "zod";
 import { askJSON, type AskResult } from "./ai";
 import { applyDirector, DirectorOut, fallbackNext, type Session, type TDirectorOut } from "./agents/director";
 import type { NextStep } from "./client/types";
@@ -9,7 +9,8 @@ import { db, type Doc } from "./db";
 import { DIRECTOR_PROMPT } from "./prompts";
 import { loadReplaySeed, recordedDecision } from "./replaySeed";
 import { Attempt, type Misconception, type TAttempt, type TQuestion, type TWorksheet } from "./schema";
-import { loadWorksheet } from "./worksheetStore";
+import { trimOverflow } from "./agents/designer";
+import { loadDrafts, loadWorksheet, type Drafts } from "./worksheetStore";
 
 type M = z.infer<typeof Misconception>;
 type StudentModel = TDirectorOut["studentModel"];
@@ -26,12 +27,44 @@ type SessionDoc = Doc & {
   skipped?: string[];
 };
 
-export type CoachDeps = { ask: (prompt: string, ctx: { sessionId: string; classCode: string; after?: string }) => Promise<AskResult<TDirectorOut>> };
+export type CoachDeps = {
+  ask: (prompt: string, ctx: { sessionId: string; classCode: string; after?: string; spareWrong?: unknown[] }) => Promise<AskResult<TDirectorOut>>;
+};
+
+/** Tidy the coach's JSON before the strict check (real outputs, 2026-11-14), so a good decision isn't thrown away
+ *  over form: the new question's overflow is trimmed like Agent 2's; if it has < 3 wrong options, it's topped up with
+ *  the answered question's own wrong formulas (they model the same mistakes, so they fit new numbers; code computes and
+ *  checks every value); internal student-model notes are cut to their limits. Exported for tests. */
+export function tidyCoachJson(v: unknown, spareWrong: unknown[] = []): unknown {
+  if (!v || typeof v !== "object") return v;
+  const o = { ...(v as Record<string, unknown>) };
+  const sm = o.studentModel as { concepts?: Record<string, { evidence?: unknown }>; notes?: unknown } | undefined;
+  if (sm && typeof sm === "object") {
+    const concepts = Object.fromEntries(
+      Object.entries(sm.concepts ?? {}).map(([k, c]) => [k, typeof c?.evidence === "string" ? { ...c, evidence: c.evidence.slice(0, 80) } : c]),
+    );
+    o.studentModel = { ...sm, concepts, ...(typeof sm.notes === "string" ? { notes: sm.notes.slice(0, 200) } : {}) };
+  }
+  const nq = o.newQuestion as { design?: unknown } | null | undefined;
+  if (nq?.design && typeof nq.design === "object") {
+    const d = trimOverflow(nq.design) as { wrong?: { misconceptionId?: unknown }[] };
+    if (Array.isArray(d.wrong) && d.wrong.length < 3) {
+      const used = new Set(d.wrong.map((w) => w?.misconceptionId));
+      const extra = spareWrong.filter((w) => !used.has((w as { misconceptionId?: unknown })?.misconceptionId));
+      d.wrong = [...d.wrong, ...extra].slice(0, 5) as typeof d.wrong;
+    }
+    o.newQuestion = { ...nq, design: d };
+  }
+  return o;
+}
+
 const realCoach: CoachDeps = {
   // reason records which answer this call followed ("next after q2/C/0", or "next first"): the replay export
   // pairs each recorded decision with its answer this way (scripts/export-replay.ts).
-  ask: (prompt, { after, ...ctx }) =>
-    askJSON("director", DirectorOut, prompt, { ctx: { ...ctx, reason: `next ${after ?? "first"}` } }) as Promise<AskResult<TDirectorOut>>,
+  ask: (prompt, { after, spareWrong, ...ctx }) =>
+    askJSON("director", z.preprocess((v) => tidyCoachJson(v, spareWrong), DirectorOut), prompt, {
+      ctx: { ...ctx, reason: `next ${after ?? "first"}` },
+    }) as Promise<AskResult<TDirectorOut>>,
 };
 /** "after q2/C/0" = question q2, choice C, wrong. Parsed back by scripts/export-replay.ts. */
 export const afterTag = (a: { questionId: string; chosen: string; correct: boolean } | null) =>
@@ -72,8 +105,9 @@ export async function decideNext(
   };
 
   // ---- ask the coach
-  const ctx = buildContext(ws, s, session, attempts, last, now);
-  let r = await deps.ask(DIRECTOR_PROMPT(JSON.stringify(ctx)), { sessionId: s._id, classCode: s.classCode, after: afterTag(last) });
+  const ctx = buildContext(ws, s, session, attempts, last, now, last ? await loadDrafts(ws.id) : {});
+  const spareWrong = (ctx.lastQuestionDrafts?.design.wrong ?? []) as unknown[];
+  let r = await deps.ask(DIRECTOR_PROMPT(JSON.stringify(ctx)), { sessionId: s._id, classCode: s.classCode, after: afterTag(last), spareWrong });
   // Offline: the exact prompt (it includes the seconds left) rarely matches the recording, so reuse the recorded
   // decision for the same answer. It goes through the same code checks below; no match → the code fallback.
   if (!r.ok && process.env.OFFLINE === "1") {
@@ -133,11 +167,16 @@ function firstPick(ws: TWorksheet, s: Session, out: TDirectorOut): NextStep {
 }
 
 /** The coach's context, kept small (~6 KB): ids and concepts, not full questions. */
-function buildContext(ws: TWorksheet, s: SessionDoc, session: Session, attempts: TAttempt[], last: TAttempt | null, now: number) {
+function buildContext(ws: TWorksheet, s: SessionDoc, session: Session, attempts: TAttempt[], last: TAttempt | null, now: number, drafts: Drafts) {
   const misconceptionCounts: Record<string, number> = {};
   for (const a of attempts) if (a.misconceptionId) misconceptionCounts[a.misconceptionId] = (misconceptionCounts[a.misconceptionId] ?? 0) + 1;
   const byId = new Map([...ws.questions, ...(s.variants ?? []).map((v) => v.question).filter((q): q is TQuestion => !!q)].map((q) => [q.id, q]));
+  // The exact draft format a new question must use: the reader + designer drafts behind the question just answered
+  // (for a coach question, its worksheet parent's). Without it the model invents its own fields.
+  const lastQ = last ? byId.get(last.questionId) : undefined;
+  const lastQuestionDrafts = lastQ ? (drafts[lastQ.id] ?? (lastQ.parentId ? drafts[lastQ.parentId] : undefined) ?? null) : null;
   return {
+    lastQuestionDrafts,
     worksheet: ws.questions.map((q) => ({ id: q.id, concept: q.concept, template: q.template, played: session.played.includes(q.id) })),
     registry: ws.misconceptions.map((m) => ({ id: m.id, label: m.label })),
     studentModel: s.studentModel,
@@ -157,6 +196,8 @@ function buildContext(ws: TWorksheet, s: SessionDoc, session: Session, attempts:
           experiments: last.experiments,
           mixTries: last.mixTries,
           balancerSteps: last.balancerSteps,
+          titrationLog: last.titrationLog ?? null,
+          testsUsed: last.testsUsed ?? null,
         }
       : null,
   };

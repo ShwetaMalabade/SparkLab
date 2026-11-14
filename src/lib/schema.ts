@@ -6,7 +6,7 @@ export const Topic = z.enum([
   "reaction_prediction", "balancing_equations", "acid_base_ph", "stoichiometry",
   "other_physics", "other_chemistry",
 ]);
-export const Template = z.enum(["projectile_launcher", "mix_lab", "equation_balancer", "answer_balloons"]);
+export const Template = z.enum(["projectile_launcher", "mix_lab", "equation_balancer", "answer_balloons", "titration_lab", "mystery_sample"]);
 const Quantity = z.object({ value: z.number(), unit: z.string() });
 const Hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
@@ -25,6 +25,38 @@ export const Reaction = z.object({
   hazard: z.string().max(100).nullable(),                 // "Lead compounds are toxic" — a warning, never a procedure
 });
 
+// ---------- Chemistry labs (added for the chemistry-only build; all optional, so older data stays valid) ----------
+export const Indicator = z.enum(["phenolphthalein", "methyl_orange", "bromothymol_blue"]);
+/** Reader draft for a titration question. Exactly one of analyte.molarity / endpointML is given on the page. */
+export const TitrationDraft = z.object({
+  analyte: z.object({ formula: z.string(), name: z.string(), volumeML: z.number(), molarity: z.number().nullable() }), // in the flask
+  titrant: z.object({ formula: z.string(), name: z.string(), molarity: z.number() }),                                  // in the burette
+  indicator: Indicator,
+  endpointML: z.number().nullable(),                      // the measured end point, when the question asks for the analyte's molarity
+});
+/** Reader draft for an "identify the unknown" question: just the answer compound (formula or name, from code's table). */
+export const MysteryDraft = z.object({ compound: z.string() });
+/** Final Titration Lab data: every number below is computed by code (src/lib/acidBase.ts). */
+export const TitrationLab = z.object({
+  ask: z.enum(["endpoint_ml", "analyte_molarity"]),
+  analyte: z.object({ formula: z.string(), name: z.string(), volumeML: z.number(), molarity: z.number() }),
+  titrant: z.object({ formula: z.string(), name: z.string(), molarity: z.number() }),
+  indicator: Indicator,
+  indicatorInfo: z.object({ name: z.string(), low: z.number(), high: z.number(), acid: Hex, base: Hex, acidLabel: z.string(), baseLabel: z.string() }),
+  equivalenceML: z.number(),
+  startPH: z.number(), endPH: z.number(),                 // pH at 0 mL and at the end point
+  curve: z.array(z.object({ ml: z.number(), pH: z.number() })).max(200),
+});
+export const TestId = z.enum(["flame", "naoh", "agno3", "bacl2", "hcl"]);
+/** Final Mystery Sample data: every observation and color comes from code (src/lib/ions.ts). */
+export const MysteryLab = z.object({
+  compound: z.object({ formula: z.string(), name: z.string() }),
+  tests: z.array(z.object({
+    test: TestId, label: z.string(), detail: z.string(),
+    effect: z.enum(["flame", "precipitate", "bubbles", "none"]), color: Hex.nullable(), text: z.string(),
+  })).length(5),
+});
+
 // ---------- Agent 1 (Reader+Solver, vision) draft ----------
 export const ReadQuestion = z.object({
   id: z.string(),
@@ -41,6 +73,8 @@ export const ReadQuestion = z.object({
   answerText: z.string(),                                 // for non-numeric answers
   reaction: Reaction.nullable(),                          // chemistry "what happens" questions
   equation: z.string().nullable(),                        // balancing questions: the balanced answer
+  titration: TitrationDraft.nullable().optional(),        // titration questions (Titration Lab)
+  mystery: MysteryDraft.nullable().optional(),            // "identify the unknown" questions (Mystery Sample)
   confidence: z.number().min(0).max(1),
 });
 export const ReadOut = z.object({ title: z.string(), questions: z.array(ReadQuestion).min(1).max(10) });
@@ -91,6 +125,8 @@ const QuestionBase = z.object({
   answer: z.object({ value: z.number().nullable(), unit: z.string().nullable(), text: z.string() }),
   reaction: Reaction.nullable(),
   equation: z.string().nullable(),
+  titration: TitrationLab.nullable().optional(),          // template "titration_lab"
+  mystery: MysteryLab.nullable().optional(),              // template "mystery_sample"
   choices: z.array(ChoiceBase).length(4),
   flags: z.array(z.string()).default([]),
 });
@@ -108,6 +144,8 @@ export const Worksheet = z.object({
   createdAt: z.string(),
 });
 export type TQuestion = z.infer<typeof Question>;
+export type TTitrationLab = z.infer<typeof TitrationLab>;
+export type TMysteryLab = z.infer<typeof MysteryLab>;
 export type TWorksheet = z.infer<typeof Worksheet>;
 
 // ---------- Runtime records (server sets createdAt: new Date() on insert; never trust the client clock) ----------
@@ -127,6 +165,10 @@ export const Attempt = z.object({
   experiments: z.array(z.object({ thetaDeg: z.number(), speed: z.number(), landedM: z.number() })).max(5).default([]),
   mixTries: z.array(z.tuple([z.string(), z.string()])).max(4).default([]),
   balancerSteps: z.array(z.array(z.number().int())).max(30).default([]),
+  titrationLog: z.object({                                // Titration Lab: what the student actually did (optional, additive)
+    finalReadingML: z.number(), drops: z.number().int().nonnegative(), overshootML: z.number(),
+  }).nullable().optional(),
+  testsUsed: z.array(TestId).max(10).optional(),          // Mystery Sample: tests run, in order (optional, additive)
   simulated: z.boolean().default(false),
 });
 export const NewSession = z.object({

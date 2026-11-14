@@ -17,6 +17,8 @@ Shweta imports: `TWorksheet`, `TQuestion`, `TAttempt`, `Template`, `Reaction`. K
 | `question.choices[4]` | `{ id: "A".."D", text, correct, misconceptionId, why }`. Show `text` exactly as is |
 | `question.reaction` | Mix Lab: `reactants[]`, `products[]`, `equation`, `observation`, `visual{bubbles,colorFrom,colorTo,precipitateColor,heat,flame}`, `hazard` |
 | `question.equation` | Balancer: the balanced answer, e.g. `"2H2 + O2 -> 2H2O"` |
+| `question.titration` | **Titration Lab** (template `"titration_lab"`, added ea3f6e9). `ask` (`"endpoint_ml"` or `"analyte_molarity"`), `analyte {formula,name,volumeML,molarity}` (flask), `titrant {formula,name,molarity}` (burette), `indicator` + `indicatorInfo {name,low,high,acid,base,acidLabel,baseLabel}`, `equivalenceML`, `startPH`, `endPH`, `curve[{ml,pH}]` (0 → 2× end point, dense near it). All code-computed |
+| `question.mystery` | **Mystery Sample** (template `"mystery_sample"`, added ea3f6e9). `compound {formula,name}` (the answer; don't show it before lock-in) and `tests[5]` = `{test: "flame"\|"naoh"\|"agno3"\|"bacl2"\|"hcl", label, detail, effect: "flame"\|"precipitate"\|"bubbles"\|"none", color (hex or null), text}`. All code-decided |
 
 ## 2. Client API — `src/lib/client/api.ts` (Dharm owns; Shweta calls)
 ```ts
@@ -52,9 +54,11 @@ export async function endSession(sessionId: string): Promise<void>;
 |---|---|---|
 | `speak(text)`, `warmVoices()` | `@/lib/speak` | Spoken `why` + coach feedback (captions are Shweta's job) |
 | `isBalanced`, `sameSpecies`, `withCoefficients`, `splitEquation` | `@/lib/chem` | Equation Balancer |
+| `phAt`, `indicatorColor`, `INDICATORS` | `@/lib/acidBase` | Titration Lab: live pH after any added volume (`phAt({analyte, titrant}, ml)` with `question.titration`'s numbers) and the flask color (`indicatorColor(indicator, pH)` → `{hex, strength 0–1, label}`). Pure, browser-safe |
+| `TESTS` | `@/lib/ions` | Mystery Sample: test names + one-line instructions (the per-question results are already in `question.mystery.tests`) |
 
 ## 5. Motion event bus (Shweta internal; listed so Dharm knows it exists)
 `src/motion/types.ts`: `{ type: "hover"|"dwell"|"bothUp"|"clap"|"lean"|"fire"|"lost"|"found", side?: "left"|"right", targetId?: string, t: number }`.
 
 ## 6. What Shweta sends at LOCK-IN (`AttemptInput`)
-`classCode, sessionId, worksheetId, questionId, questionOrigin, chosen ("A".."D" or "X"), chosenText, correct, misconceptionId, msToAnswer, input ("gesture"|"keyboard"|"mouse"), hoverTrace[], experiments[] (Launcher: thetaDeg, speed, landedM), mixTries[] (Mix Lab pairs), balancerSteps[] (coefficient arrays)`.
+`classCode, sessionId, worksheetId, questionId, questionOrigin, chosen ("A".."D" or "X"), chosenText, correct, misconceptionId, msToAnswer, input ("gesture"|"keyboard"|"mouse"), hoverTrace[], experiments[] (Launcher: thetaDeg, speed, landedM), mixTries[] (Mix Lab pairs), balancerSteps[] (coefficient arrays)`, plus (optional, added ea3f6e9) `titrationLog {finalReadingML, drops, overshootML}` (Titration Lab) and `testsUsed[]` (Mystery Sample, in order).
