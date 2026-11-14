@@ -2,10 +2,10 @@
 **Written ONLY by Shweta's LLM.** Dharm's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 03:45 · **Now working on:** live-camera checks for P1-01/04/06/07/11, then Merge 1 · **Branch:** p1/P1-11 (all Phase 0–1 commits, rebased on main 78355e5)
+**Last updated:** Sat 05:10 · **Now working on:** Phase 2 done (keyboard-verified); live-camera checks, then Merge 2 · **Branch:** p1/P1-12 (on main a201572)
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
-- Phase 0–1 code is complete and `/play/fixture` runs end to end on the mock api (keyboard + mouse, verified in headless Chrome). The 🟦 rows only wait on Shweta's live-camera tests.
+- Phase 0–2 code is complete. `/play/fixture` runs all 4 questions keyboard-only on the mock api (Launcher q1, Balloons q2, Mix Lab q3, q4 as Balloons until P1-16), verified headless on a prod build. The 🟦 rows only wait on Shweta's live-camera tests.
 
 ## Tasks
 | ID | Task | Status | Commit | Note (1 line) |
@@ -22,10 +22,10 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P1-09 | Game store + GameRunner | ✅ | 28e43db | Full loop on mock api: fixture q1→q4, attempts + NextStep in parallel, pause clock, N skip |
 | P1-10 | Answer Balloons | ✅ | 28e43db | Dwell / lean+bothUp / 1–4 / click; hover trace; coral pop + lime glow + confetti |
 | P1-11 | Play page | 🟦 | 28e43db | /play/fixture keyboard-only ✓ (headless). Needs the gesture-only run on a real camera |
-| P1-12 | Projectile Launcher | ⬜ | | |
-| P1-13 | Effects | ⬜ | | |
-| P1-14 | Mix Lab | ⬜ | | |
-| P1-15 | Variant badge + coach line | ⬜ | | |
+| P1-12 | Projectile Launcher | ✅ | 87cd884 | Done-when ✓: 30° → 35.3 m, 45° farthest, 30°=60° (tests); keyboard run ✓. Hold-steady by gesture: live check pending |
+| P1-13 | Effects | ✅ | bf88565 | Trail, Bubbles, Precipitate, Confetti (+Burst); instanced ≤ 300, sizes follow the flask |
+| P1-14 | Mix Lab | 🟦 | 422b6ba | Keys ✓ (q3: PbI₂ precipitate, CPK equation, hazard card, mixTries). By-gesture run pending (live camera) |
+| P1-15 | Variant badge + coach line | ✅ | c033134 | Badge + 'Coach: …' shown; check page /play/dev/variant |
 | P1-16 | Equation Balancer | ⬜ | | |
 | P1-17 | AI trace drawer | ⬜ | | |
 | P1-18 | Polish | ⬜ | | |
@@ -48,6 +48,9 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Attempt fields:** `input` is honest (`gesture` / `keyboard` / `mouse`); `hoverTrace` is `{choice, ms}` from cursor or mouse hover ≥ 150 ms; `msToAnswer` excludes paused time.
 - **Bus (Shweta-internal):** besides the 8 gesture types there's a `command` event for keyboard-only controls (pick 1–4, skip, pause, debug, trace, angle, power).
 - **FYI, bundle:** `api.ts` imports `fallbackNext` from `agents/director`, which pulls `assemble` + mathjs into the Play page's client bundle. Not blocking; maybe worth splitting when you switch to real fetch.
+- **Attempts now carry** `experiments[]` (Launcher: `{thetaDeg, speed, landedM}`, code-computed) and `mixTries[]` (Mix Lab pairs, formulas as in the worksheet).
+- **Mix Lab wording:** a wrong pair says "Not the pair for this experiment. Try again." (05 §3), not the task file's "No visible reaction": that pair was never verified.
+- **Launcher field** follows 05 §2 (v²/g rounded up to 10 m, min 50 m) rather than a fixed 100 m, so a 35 m shot uses most of the screen.
 - **Offline:** the arena doesn't use `<Environment preset="city">` (it downloads an HDR from a CDN); it lights with Lightformers instead.
 
 ## Merge log
