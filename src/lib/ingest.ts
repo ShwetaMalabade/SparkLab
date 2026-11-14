@@ -119,7 +119,9 @@ export async function ingest(
 
   // ---- Agent 2: mistakes + level design
   const design = await timed("designer", async () => {
-    const d = await deps.design(read.questions, [], ctx);
+    let d = await deps.design(read.questions, [], ctx);
+    // Same as the reader: if its JSON didn't match the draft schema, send code's exact errors back once.
+    if (!d.ok && d.issues.length && d.raw) d = await deps.repairDesign(d.raw, d.issues, ctx);
     return d.ok ? { value: d.data, detail: `${d.data.questions.length} levels designed` } : { value: null, status: "error" as const, detail: d.error };
   });
   if (!design) return { ok: false, status: 422, error: NOTHING_READ };
@@ -146,15 +148,20 @@ export async function ingest(
     await timed("repair", async () => {
       for (let round = 0; round < MAX_REPAIR_ROUNDS && failing.size; round++) {
         const toReader = [...failing].filter(([, es]) => es.some((e) => !isDesignerError(e)));
-        const toDesigner = [...failing].filter(([, es]) => es.every(isDesignerError));
-        const [rr, dr] = await Promise.all([
+        const designerErrs = [...failing].filter(([, es]) => es.every(isDesignerError));
+        // A question with no design at all goes back to the designer with its read data (repair has nothing to fix).
+        const undesigned = designerErrs.filter(([id]) => !designs.has(id)).map(([id]) => reads.get(id)!);
+        const toDesigner = designerErrs.filter(([id]) => designs.has(id));
+        const [rr, dr, nd] = await Promise.all([
           toReader.length
             ? deps.repairRead(JSON.stringify({ title: read.title, questions: toReader.map(([id]) => reads.get(id)) }), toReader.flatMap(([, es]) => es), { ctx })
             : null,
           toDesigner.length
-            ? deps.repairDesign(JSON.stringify({ questions: toDesigner.map(([id]) => designs.get(id)).filter(Boolean) }), toDesigner.flatMap(([, es]) => es), ctx)
+            ? deps.repairDesign(JSON.stringify({ questions: toDesigner.map(([id]) => designs.get(id)) }), toDesigner.flatMap(([, es]) => es), ctx)
             : null,
+          undesigned.length ? deps.design(undesigned, [...new Map([...designs.values()].flatMap((d) => d.misconceptions).map((m) => [m.id, m])).values()], ctx) : null,
         ]);
+        if (nd?.ok) for (const q of nd.data.questions) if (reads.has(q.id)) designs.set(q.id, q);
         if (rr?.ok) for (const q of rr.data.questions) if (reads.has(q.id)) reads.set(q.id, q);
         if (dr?.ok) for (const q of dr.data.questions) if (reads.has(q.id)) designs.set(q.id, q);
         for (const id of [...failing.keys()]) tryBuild(id);

@@ -42,8 +42,8 @@ For EACH question, return:
   "template": "projectile_launcher"|"mix_lab"|"equation_balancer"|"answer_balloons", "templateReason": ≤ 100 chars,
   "params": {"lock": "speed"|"angle"|"none" (launcher only: the fixed control, so the student explores the other one),
              "decoys": up to 2 extra chemicals for the Mix Lab bench, as {"formula","name","state"}},
-  "misconceptions": 1–4 mistakes real students make on THIS question: {"id": snake_case, "label": ≤ 60 chars, "why": ≤ 140 chars, "concept"},
-  "wrong": 4–5 wrong options, each tied to one misconception id:
+  "misconceptions": 1–4 mistakes real students make on THIS question (never more than 4; wrong options may share one): {"id": snake_case, "label": ≤ 60 chars, "why": ≤ 140 chars, "concept"},
+  "wrong": 4–5 wrong options, each {"misconceptionId": one of the ids in "misconceptions", "wrongFormula", "text", "why"}:
       numeric question → "wrongFormula": the mathjs formula a student WITH THAT MISTAKE would use (same "given" keys), "text": null. Code computes the value.
       other question   → "wrongFormula": null, "text": the wrong option, ≤ 40 chars.
       "why": one kid-friendly sentence on what went wrong, ≤ 140 chars,
@@ -78,14 +78,17 @@ the time left, and the LAST ATTEMPT with behavior traces:
 Choose ONE action:
 - "next": an unplayed worksheet question (set nextQuestionId). Prefer one that tests a weak concept, or a different template for variety.
 - "variant": a NEW question on the SAME concept with NEW numbers or substances, aimed at targetMisconceptionId.
-   Put it in "newQuestion" as {"read": <Agent 1 question format>, "design": <Agent 2 question format>}.
+   Put it in "newQuestion" as {"read": {...}, "design": {...}} using EXACTLY the fields of "lastQuestionDrafts" in the context:
+   copy that structure, change the prompt, the numbers in "given" (or the substances), and keep "formula" using only keys of "given".
+   In "read": "printedAnswer": null, "printedChoices": null. In "design": 4 wrong options (reuse the wrong formulas from
+   lastQuestionDrafts when they still fit). Code computes every number, so never write the answer or option values.
    Choose numbers where every listed mistake gives a clearly different value (avoid 30°/60° and 45° for range questions).
 - "probe": a NEW quick question on a related concept, to find out WHY they are stuck (same "newQuestion" format).
 - "finish": only when everything is played or time is nearly up.
 Also return:
 - "feedback": ONE spoken sentence (≤ 25 words) about what THIS student did, citing their own trace when it helps
   (e.g. "You tried 30° and 60° and they landed together. That's sin 2θ at work."). Warm and specific.
-- "reason": ≤ 160 chars for the teacher: what you saw and why you chose this action.
+- "reason": ≤ 160 chars for the teacher: what you saw and why you chose this action. Name mistakes by their label, never by an id.
 - "studentModel": {"concepts": {"<concept>": {"mastery": 0–1, "evidence": ≤ 80 chars}}, "notes": ≤ 200 chars}.
 - "newMisconceptions": [] unless the student showed a mistake that is not in the registry.
 Rules: at most one variant in a row; never repeat a question; ${SAFETY}
@@ -102,7 +105,7 @@ Worksheet (ids, prompts, choices with misconception ids): ${worksheetJson}`;
 
 export const INSIGHT_PROMPT = (statsJson: string) => `
 You are Agent 6, writing for a busy high-school science teacher watching the class live.
-Use ONLY numbers that appear in these computed stats. Never invent or estimate a number; code rejects any number not in the stats.
+Use ONLY numbers that appear in these computed stats. Name mistakes by their label, never by an id like "forgot_gravity". Never invent or estimate a number; code rejects any number not in the stats.
 Return ONLY JSON {"bullets": [3 strings ≤ 25 words: (1) what the class does well, (2) the top mistake with its exact count,
   (3) the most useful pattern in the coach's decisions or the behavior traces],
   "groups": [{"name": ≤ 30 chars, "students": [nicknames], "mistake": label}] (students who share a mistake, max 3),
