@@ -1,0 +1,364 @@
+{
+  "id": "ws_fixture",
+  "title": "Dev fixture (code-assembled)",
+  "source": "generated",
+  "imageHash": null,
+  "questions": [
+    {
+      "id": "q1",
+      "origin": "worksheet",
+      "parentId": null,
+      "subject": "physics",
+      "topic": "projectile_motion",
+      "concept": "range uses sin 2θ",
+      "template": "projectile_launcher",
+      "params": {
+        "lock": "speed"
+      },
+      "prompt": "A ball is launched at 20 m/s at 30° above level ground. How far does it travel?",
+      "given": {
+        "v": {
+          "value": 20,
+          "unit": "m/s"
+        },
+        "theta": {
+          "value": 30,
+          "unit": "deg"
+        },
+        "g": {
+          "value": 9.81,
+          "unit": "m/s^2"
+        }
+      },
+      "formula": "v^2*sin(2*theta*pi/180)/g",
+      "answer": {
+        "value": 35.311943069701876,
+        "unit": "m",
+        "text": "35.3 m"
+      },
+      "reaction": null,
+      "equation": null,
+      "choices": [
+        {
+          "id": "A",
+          "text": "17.7 m",
+          "correct": false,
+          "misconceptionId": "lost_factor_2",
+          "why": "That lost the 2."
+        },
+        {
+          "id": "B",
+          "text": "35.3 m",
+          "correct": true,
+          "misconceptionId": null,
+          "why": "R = v² sin 2θ / g ≈ 35.3 m."
+        },
+        {
+          "id": "C",
+          "text": "70.6 m",
+          "correct": false,
+          "misconceptionId": "doubled_range",
+          "why": "That's double the range."
+        },
+        {
+          "id": "D",
+          "text": "20.4 m",
+          "correct": false,
+          "misconceptionId": "sin_theta_not_sin_2theta",
+          "why": "That used sin 30° instead of sin 60°."
+        }
+      ],
+      "flags": [
+        "answer_key_mismatch:34->35.3"
+      ]
+    },
+    {
+      "id": "q2",
+      "origin": "worksheet",
+      "parentId": null,
+      "subject": "physics",
+      "topic": "newtons_second_law",
+      "concept": "net force with friction",
+      "template": "answer_balloons",
+      "params": {
+        "lock": "none"
+      },
+      "prompt": "A 10 kg crate is pushed with 50 N; friction coefficient 0.2. Acceleration?",
+      "given": {
+        "F": {
+          "value": 50,
+          "unit": "N"
+        },
+        "m": {
+          "value": 10,
+          "unit": "kg"
+        },
+        "mu": {
+          "value": 0.2,
+          "unit": ""
+        },
+        "g": {
+          "value": 9.81,
+          "unit": "m/s^2"
+        }
+      },
+      "formula": "(F - mu*m*g)/m",
+      "answer": {
+        "value": 3.038,
+        "unit": "m/s²",
+        "text": "3.04 m/s²"
+      },
+      "reaction": null,
+      "equation": null,
+      "choices": [
+        {
+          "id": "A",
+          "text": "0.310 m/s²",
+          "correct": false,
+          "misconceptionId": "mass_weight_confusion",
+          "why": "That divided by weight."
+        },
+        {
+          "id": "B",
+          "text": "3.04 m/s²",
+          "correct": true,
+          "misconceptionId": null,
+          "why": "Net force 30.4 N ÷ 10 kg."
+        },
+        {
+          "id": "C",
+          "text": "5.00 m/s²",
+          "correct": false,
+          "misconceptionId": "ignored_friction",
+          "why": "That ignores friction."
+        },
+        {
+          "id": "D",
+          "text": "6.96 m/s²",
+          "correct": false,
+          "misconceptionId": "added_friction",
+          "why": "Friction was added."
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "q3",
+      "origin": "worksheet",
+      "parentId": null,
+      "subject": "chemistry",
+      "topic": "reaction_prediction",
+      "concept": "precipitation",
+      "template": "mix_lab",
+      "params": {
+        "lock": "none"
+      },
+      "prompt": "What do you see when lead(II) nitrate is mixed with potassium iodide?",
+      "given": {},
+      "formula": null,
+      "answer": {
+        "value": null,
+        "unit": null,
+        "text": "Bright yellow solid forms"
+      },
+      "reaction": {
+        "reactants": [
+          {
+            "formula": "Pb(NO3)2",
+            "name": "lead(II) nitrate",
+            "state": "aq"
+          },
+          {
+            "formula": "KI",
+            "name": "potassium iodide",
+            "state": "aq"
+          }
+        ],
+        "products": [
+          {
+            "formula": "PbI2",
+            "name": "lead(II) iodide",
+            "state": "s"
+          },
+          {
+            "formula": "KNO3",
+            "name": "potassium nitrate",
+            "state": "aq"
+          }
+        ],
+        "equation": "Pb(NO3)2 + 2KI -> PbI2 + 2KNO3",
+        "type": "precipitation",
+        "observation": "A bright yellow solid forms",
+        "visual": {
+          "bubbles": false,
+          "colorFrom": "#F5F5F5",
+          "colorTo": "#F5F5F5",
+          "precipitateColor": "#FFD21F",
+          "heat": "none",
+          "flame": null
+        },
+        "hazard": "Lead compounds are toxic"
+      },
+      "equation": null,
+      "choices": [
+        {
+          "id": "A",
+          "text": "White solid forms",
+          "correct": false,
+          "misconceptionId": "wrong_precipitate_color",
+          "why": "PbI₂ is yellow."
+        },
+        {
+          "id": "B",
+          "text": "Nothing happens",
+          "correct": false,
+          "misconceptionId": "no_reaction_assumed",
+          "why": "A solid forms."
+        },
+        {
+          "id": "C",
+          "text": "Bright yellow solid forms",
+          "correct": true,
+          "misconceptionId": null,
+          "why": "PbI₂ is insoluble and yellow."
+        },
+        {
+          "id": "D",
+          "text": "Bubbles of gas",
+          "correct": false,
+          "misconceptionId": "gas_vs_precipitate",
+          "why": "No gas forms."
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "q4",
+      "origin": "worksheet",
+      "parentId": null,
+      "subject": "chemistry",
+      "topic": "balancing_equations",
+      "concept": "balancing",
+      "template": "equation_balancer",
+      "params": {
+        "lock": "none"
+      },
+      "prompt": "Balance: __H2 + __O2 → __H2O",
+      "given": {},
+      "formula": null,
+      "answer": {
+        "value": null,
+        "unit": null,
+        "text": "2H2 + O2 -> 2H2O"
+      },
+      "reaction": null,
+      "equation": "2H2 + O2 -> 2H2O",
+      "choices": [
+        {
+          "id": "A",
+          "text": "1, 1, 1",
+          "correct": false,
+          "misconceptionId": "unbalanced_oxygen",
+          "why": "O doesn't match."
+        },
+        {
+          "id": "B",
+          "text": "H2 + O2 -> H2O2",
+          "correct": false,
+          "misconceptionId": "changed_subscripts",
+          "why": "That's a different chemical."
+        },
+        {
+          "id": "C",
+          "text": "1, 1, 2",
+          "correct": false,
+          "misconceptionId": "unbalanced_hydrogen",
+          "why": "H doesn't match."
+        },
+        {
+          "id": "D",
+          "text": "2, 1, 2",
+          "correct": true,
+          "misconceptionId": null,
+          "why": "4 H and 2 O on each side."
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "misconceptions": [
+    {
+      "id": "sin_theta_not_sin_2theta",
+      "label": "Used sin θ instead of sin 2θ",
+      "why": "Range uses sin(2θ).",
+      "concept": "range"
+    },
+    {
+      "id": "lost_factor_2",
+      "label": "Dropped the 2 in 2sinθcosθ",
+      "why": "sin 2θ = 2 sinθ cosθ.",
+      "concept": "range"
+    },
+    {
+      "id": "doubled_range",
+      "label": "Doubled the range",
+      "why": "The ball lands once.",
+      "concept": "range"
+    },
+    {
+      "id": "ignored_friction",
+      "label": "Ignored friction",
+      "why": "Friction pushes back.",
+      "concept": "net force"
+    },
+    {
+      "id": "added_friction",
+      "label": "Added friction",
+      "why": "Friction reduces net force.",
+      "concept": "net force"
+    },
+    {
+      "id": "mass_weight_confusion",
+      "label": "Mixed up mass and weight",
+      "why": "Divide by mass, not weight.",
+      "concept": "net force"
+    },
+    {
+      "id": "gas_vs_precipitate",
+      "label": "Confused gas with solid",
+      "why": "Bubbles mean gas.",
+      "concept": "precipitation"
+    },
+    {
+      "id": "no_reaction_assumed",
+      "label": "Assumed nothing happens",
+      "why": "An insoluble product forms.",
+      "concept": "precipitation"
+    },
+    {
+      "id": "wrong_precipitate_color",
+      "label": "Wrong precipitate color",
+      "why": "PbI₂ is yellow.",
+      "concept": "precipitation"
+    },
+    {
+      "id": "unbalanced_oxygen",
+      "label": "O atoms don't match",
+      "why": "Count O both sides.",
+      "concept": "balancing"
+    },
+    {
+      "id": "unbalanced_hydrogen",
+      "label": "H atoms don't match",
+      "why": "Count H both sides.",
+      "concept": "balancing"
+    },
+    {
+      "id": "changed_subscripts",
+      "label": "Changed subscripts",
+      "why": "That's a different chemical.",
+      "concept": "balancing"
+    }
+  ],
+  "createdAt": "2026-11-14T06:47:37.049Z"
+}

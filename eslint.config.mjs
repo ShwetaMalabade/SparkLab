@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plan docs + reference code (copied into src/ by P2-03)
+    "docs/**",
   ]),
 ]);
 
