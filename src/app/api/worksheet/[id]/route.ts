@@ -1,10 +1,11 @@
 // GET   /api/worksheet/[id] → TWorksheet & {dropped}
 // PATCH /api/worksheet/[id] {questionId, prompt?, given?: {symbol: number}} → updated worksheet
+//       or {questionId, remove: true} → the worksheet without that question (never the last one)
 //   Re-runs CODE verification only (assemble on the saved agent drafts). No AI call. (docs/plan/02 §6.4)
 import { z } from "zod";
 import { assemble } from "@/lib/assemble";
 import { json, jsonError, readBody } from "@/lib/http";
-import { loadDrafts, loadDropped, loadWorksheet, replaceQuestion } from "@/lib/worksheetStore";
+import { loadDrafts, loadDropped, loadWorksheet, removeQuestion, replaceQuestion } from "@/lib/worksheetStore";
 
 export async function GET(_req: Request, ctx: RouteContext<"/api/worksheet/[id]">) {
   const { id } = await ctx.params;
@@ -17,14 +18,22 @@ const Patch = z
     questionId: z.string().min(1),
     prompt: z.string().min(1).max(600).optional(),
     given: z.record(z.string(), z.number().finite()).optional(), // new VALUES for existing symbols; units stay
+    remove: z.literal(true).optional(),
   })
-  .refine((b) => b.prompt !== undefined || b.given !== undefined, "Send a new prompt and/or given values.");
+  .refine((b) => b.prompt !== undefined || b.given !== undefined || b.remove, "Send a new prompt, given values, or remove: true.");
 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/worksheet/[id]">) {
   const { id } = await ctx.params;
   const body = await readBody(req, Patch, 5_000);
   if (!body.ok) return body.res;
-  const { questionId, prompt, given } = body.data;
+  const { questionId, prompt, given, remove } = body.data;
+
+  if (remove) {
+    const r = await removeQuestion(id, questionId);
+    if (r === "missing") return jsonError(404, `No question ${questionId} in ${id}.`);
+    if (r === "last") return jsonError(409, "A worksheet needs at least one question.");
+    return json({ ...(await loadWorksheet(id)), dropped: await loadDropped(id) });
+  }
 
   const ws = await loadWorksheet(id);
   if (!ws) return jsonError(404, `No worksheet ${id}.`);
