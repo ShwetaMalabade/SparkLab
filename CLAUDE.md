@@ -10,6 +10,8 @@ You are a coding LLM on a **2-person HackPrinceton team** building **Homework Ar
 
 The pre-tested code from `docs/plan/tested-code/` is in `src/lib`, `tests/` and `scripts/`, kept byte-identical to the reference. Storage goes through `db` from `src/lib/db.ts` (MongoDB, or `memoryDb.ts` when `OFFLINE=1`; both implement `Store` in `dbTypes.ts`). Every `_id` is a string we choose, and the store sets `createdAt`. `src/lib/client/api.ts` has two paths. **Mock** (the default) runs entirely in the browser: the fixture `data/fixtures/worksheet.json`, attempts in `localStorage["ha:attempts"]`, and `nextStep` = `fallbackNext`. **Live** (`NEXT_PUBLIC_MOCK=0`) and **offline** use the real API routes. `postAttempt` queues answers and retries every 5 s, and `nextStep` aborts at 6 s and falls back in the browser.
 
+Server logic lives in `src/lib`, and the API routes stay thin (`src/lib/http.ts` gives them `readBody`, which applies a Zod schema and a size cap, plus `json`/`jsonError` with `no-store`). `ingest.ts` is the scan pipeline: Agent 1 reads, code checks, Agent 2 designs, `assemble()` runs, then at most 2 repair rounds and a save. It reports each step through `onStep`, which is what the Scan screen shows. `coach.ts` is everything `/api/next` does. Agent prompts are in `prompts.ts`, and the per-agent callers are in `agents/`. `worksheetStore.ts` is the one place that converts between the DB shape (`_id`, `Date`) and the contract `TWorksheet` (`id`, ISO string). It also stores each question's agent drafts, so a Review edit re-runs `assemble()` without an AI call.
+
 ## Commands
 
 ```bash
@@ -18,6 +20,8 @@ npm run build                    # must pass before any merge into main (main au
 rm -rf .next && npm run build     # if globals.css/@theme edits don't show up (Turbopack + Tailwind loader caches stale CSS)
 # Tests use a plain tsx harness (PASS/FAIL lines), not a test runner. Run one file at a time:
 npx tsx tests/verify.test.ts && npx tsx tests/assemble.test.ts && npx tsx tests/director.test.ts   # must stay 86/86 after touching src/lib
+npx tsx tests/gestures.test.ts   # Shweta's gesture engine on synthetic landmarks (32/32)
+npm run lint                     # eslint; the pre-tested files have relaxed `any` rules in eslint.config.mjs, keep them byte-identical
 npx tsx scripts/make-fixture.ts  # regenerates data/fixtures/worksheet.json through the real assemble()
 npx tsx scripts/test-ai.ts       # AI key smoke test → {"ok":true}
 OFFLINE=1 npm run build && OFFLINE=1 npm start   # offline demo: in-memory DB + recorded AI replays
