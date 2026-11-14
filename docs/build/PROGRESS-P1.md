@@ -2,7 +2,7 @@
 **Written ONLY by Shweta's LLM.** Dharm's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 13:25 · **Now working on:** Phase 3 done; Merge 3 prep (live-mode run once the Gemini key is in) · **Branch:** p1/P1-16 → main
+**Last updated:** Sat 22:30 · **Now working on:** — handing the remaining lab scenes to Dharm (Shweta's call) · **Branch:** p1/P1-16 → main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - Phase 0–3 code is complete. `/play/fixture` runs all 4 questions on the mock api (Launcher q1, Balloons q2, Mix Lab q3, Balancer q4). Live webcam checks for Phase 0–2 done by Shweta. P1-16 was built before the Merge 2 call; if Merge 2 is 🔴, revert one line in `src/game/templates/index.ts` and q4 falls back to Balloons.
@@ -33,6 +33,20 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P1-20 | Performance | 🟦 | (this) | Auto quality: render loop < 30 fps for 3 s → step down once (half particles → no environment → bloom 0.5), never back up; unit-tested. D shows "3D fps" + quality level. Needs Shweta's reading on the demo laptop (Mix Lab with pose) |
 | P1-21 | People + lighting test | ⬜ | | |
 | P1-22 | Freeze | ⬜ | | |
+
+## Handoff to Dharm (Sat 22:30): Shweta asked Dharm to take the rest
+**Built and on main (this push):**
+- **Finger tracking** (`src/motion/hands.ts`, MediaPipe Hand Landmarker, model in `public/models/hand_landmarker.task`): per hand ✋ open / ☝️ point / ✊ fist + tilt. Rule everywhere: an open hand never selects; point-and-hold fills the ring; closing a fist ON a target selects at once; while the hand tracker loads nothing is selected. New bus events `grab` / `release` (side). Cursor shows the shape. Unit-tested (`tests/gestures.test.ts`).
+- **`/play/lab`** (the new lab experience, separate from the worksheet game): 3D building → speech bubble over the student "Which one do you want to learn today?" (Organic / Inorganic / Acids & Bases / Physical = soon) → he auto-walks to that room → "Ready for questions?" → hands-on lessons at a bench → back for the next subject.
+  - **Molecule Builder** (`src/game/lab/MoleculeBuilder.tsx`, rules in `src/game/molecules.ts`): grab atoms with a fist, drop in the ring; code counts atoms (`parseFormula`), wrong element / too many explained, right set snaps into the shape. CH4, C2H6, CH3OH, H2O, NH3, CO2.
+  - **Pour Lab** (`src/game/lab/PourLab.tsx`, lessons in `src/game/lab/lessons.ts`): fist on a beaker, hold over the flask, tilt to pour (visible stream, flask fills) → precipitate / colour / bubbles → explanation card. Equations atom-checked in tests.
+  - These lessons are LOCAL (not worksheet questions): they don't post attempts yet.
+- **Lab building** (`src/three/lab/*`): 17 Meshy GLB models in `public/models/lab` (~40 MB, worth compressing), rotate (drag / Q·E), zoom, WASD, auto-walk. In the worksheet game it's opt-in: `/play/<wsId>?world=1`.
+- **Mix Lab:** grab + tilt-to-pour replaces clap when finger tracking is on (keyboard C still works).
+
+**Not built by Shweta (yours now):** R-P2-1 Titration Lab, R-P2-2 Mystery Sample, R-P2-3 Reaction Yield Lab + "everything on the bench / no balloons" from LAB-SPEC. Until then those templates fall back to answer balloons in the worksheet game. The bench pieces you can reuse: `PourScene` (grab/tilt/stream/fill), `useStationRoom` + `StationBackdrop` (lab room behind the bench), `Model` (GLB loader with real-world heights), hand events `grab`/`release` + `useGame().hands[side].tilt`.
+
+**Suggested for you:** record `/play/lab` lesson results as attempts (e.g. a `molecule_builder` / `pour_lab` template, additive) so the phone sees them.
 
 ## Requests to Dharm
 <!-- Things you need changed in THEIR files. Format: - [ ] R-P1-1 · what you need · why · which task waits on it -->
