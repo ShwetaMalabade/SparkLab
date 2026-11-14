@@ -8,7 +8,7 @@ You are a coding LLM on a **2-person HackPrinceton team** building **Homework Ar
 
 ## Current repo state
 
-The app was scaffolded in P2-01 (Next.js + deps installed). Until P2-03 copies it into `src/lib`, the pre-tested code lives only in `docs/plan/tested-code/` (`src/lib/{schema,chem,verifyPhysics,assemble,ai,replay}.ts`, `src/lib/agents/director.ts`, `tests/*.test.ts`, `scripts/make-fixture.ts`). It has no `db.ts`: write that from `docs/plan/02 §6.3`, or stub it, because `ai.ts` imports it.
+The pre-tested code from `docs/plan/tested-code/` is in `src/lib`, `tests/` and `scripts/`, kept byte-identical to the reference. `src/lib/db.ts` is a no-op stub until the real Mongo version (P2-07). `src/lib/client/api.ts` currently runs **mock** behavior only: the fixture `data/fixtures/worksheet.json`, attempts in `localStorage["ha:attempts"]`, and `nextStep` = `fallbackNext`.
 
 ## Commands
 
@@ -36,7 +36,7 @@ Environment variables go in `.env.local` (never commit it) and are listed in `do
 - **Live teacher view:** `/live/[code]` polls `GET /api/class/[code]` every 2 s. There are no change streams or websockets.
 - **Mongo:** cache the client on `globalThis`. `createdAt` is a server-set BSON `Date` with a 24 h TTL. `memoryDb.ts` mirrors the same functions for offline mode.
 - **Client boundary:** Shweta calls only `src/lib/client/api.ts` (signatures in `docs/build/CONTRACTS.md §2`). `getMode()` returns `mock`, `live` or `offline`. In mock mode, `getWorksheet` returns the fixture (`wsId = "fixture"`). `postAttempt` and `nextStep` **never throw**.
-- **Next.js 16.4** (scaffolded with `cacheComponents: true` in `next.config.ts`), so the plan's Next 15 notes may be stale. Before writing route or page code, read the relevant guide in `node_modules/next/dist/docs/`. Route `params` is a Promise: use `const { code } = await params;` on the server and `useParams()` on the client. Tailwind is v4, which uses CSS `@theme` in `globals.css` instead of a `tailwind.config.ts`.
+- **Next.js 16.4** (scaffolded with `cacheComponents: true` in `next.config.ts`), so the plan's Next 15 notes may be stale. Before writing route or page code, read the relevant guide in `node_modules/next/dist/docs/`. Route `params` is a Promise: use `const { code } = await params;` on the server and `useParams()` on the client. With Cache Components, a dynamic segment (`[wsId]`, `[code]`, `[sessionId]`) is runtime data, so read it inside a `<Suspense>` boundary, or the build fails. `src/app/results/[sessionId]/` shows the pattern: a server `page.tsx` wraps a client child in `<Suspense>`, and the child calls `useParams()`. Tailwind is v4, which uses CSS `@theme` in `globals.css` instead of a `tailwind.config.ts`.
 - **Motion:** gestures are published on the bus defined in `src/motion/types.ts` (hover, dwell, bothUp, clap, lean, fire, lost, found). The default is seated, aiming with the forearm (elbow to wrist). Every gesture has a keyboard twin, and the demo must never block on the camera or the network. Camera frames never leave the browser.
 
 > **Who's who:** **Dharm** = BRAIN (task IDs `P2-xx`, `docs/build/P2-TASKS.md`, `PROGRESS-P2.md`, branches `p2/*`) · **Shweta** = PLAY (task IDs `P1-xx`, `docs/build/P1-TASKS.md`, `PROGRESS-P1.md`, branches `p1/*`). Address work by name; the `P1`/`P2` prefixes are just stable IDs.
