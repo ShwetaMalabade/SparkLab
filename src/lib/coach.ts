@@ -7,6 +7,7 @@ import { applyDirector, DirectorOut, fallbackNext, type Session, type TDirectorO
 import type { NextStep } from "./client/types";
 import { db, type Doc } from "./db";
 import { DIRECTOR_PROMPT } from "./prompts";
+import { loadReplaySeed, recordedDecision } from "./replaySeed";
 import { Attempt, type Misconception, type TAttempt, type TQuestion, type TWorksheet } from "./schema";
 import { loadWorksheet } from "./worksheetStore";
 
@@ -66,7 +67,13 @@ export async function decideNext(
 
   // ---- ask the coach
   const ctx = buildContext(ws, s, session, attempts, last, now);
-  const r = await deps.ask(DIRECTOR_PROMPT(JSON.stringify(ctx)), { sessionId: s._id, classCode: s.classCode });
+  let r = await deps.ask(DIRECTOR_PROMPT(JSON.stringify(ctx)), { sessionId: s._id, classCode: s.classCode });
+  // Offline: the exact prompt (it includes the seconds left) rarely matches the recording, so reuse the recorded
+  // decision for the same answer. It goes through the same code checks below; no match → the code fallback.
+  if (!r.ok && process.env.OFFLINE === "1") {
+    const rec = DirectorOut.safeParse(recordedDecision(loadReplaySeed(), last));
+    if (rec.success) r = { ok: true, data: rec.data, ms: 0, cached: true };
+  }
   let step: NextStep;
   let out: TDirectorOut | null = null;
   if (!r.ok) step = fallbackNext(ws, session, r.error === "schema" ? "coach answer didn't match the format" : `coach unavailable (${r.error})`);
