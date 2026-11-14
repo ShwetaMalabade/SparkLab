@@ -18,13 +18,32 @@ async function connect(): Promise<MongoDb> {
   const client = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000, ignoreUndefined: true });
   await client.connect();
   const mdb = client.db(process.env.MONGODB_DB ?? "homework_arena");
+  await ensureIndexes(mdb);
+  return mdb;
+}
+
+/** Demo data cleans itself up: Mongo deletes these docs 24 h after the server-set createdAt (docs/plan/06 §4).
+ *  Worksheets are kept, so "Use last scan" still works the next day. */
+export const TTL_COLLECTIONS = ["classes", "sessions", "attempts", "aiCalls"] as const;
+export const TTL_SECONDS = 24 * 60 * 60;
+
+type IndexTarget = Pick<MongoDb, "collection">;
+export async function ensureIndexes(mdb: IndexTarget): Promise<void> {
   await Promise.all([
     mdb.collection("attempts").createIndex({ classCode: 1, createdAt: 1 }),
     mdb.collection("sessions").createIndex({ classCode: 1 }),
     mdb.collection("aiCalls").createIndex({ classCode: 1, createdAt: -1 }),
     mdb.collection("aiCalls").createIndex({ agent: 1, inputHash: 1 }),
   ]);
-  return mdb;
+  // A TTL index that already exists with other options must not take the whole app down: warn and go on.
+  await Promise.all(
+    TTL_COLLECTIONS.map((c) =>
+      mdb
+        .collection(c)
+        .createIndex({ createdAt: 1 }, { expireAfterSeconds: TTL_SECONDS, name: "createdAt_ttl" })
+        .catch((e: unknown) => console.warn(`TTL index on ${c} not created: ${e instanceof Error ? e.message : e}`)),
+    ),
+  );
 }
 
 function mongo(): Promise<MongoDb> {
