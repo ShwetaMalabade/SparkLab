@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 15:50 · **Now working on:** — (labs-only server side done; waiting for Dharm's go: README/Devpost rewrite) · **Branch:** main
+**Last updated:** Sat 15:22 · **Now working on:** — (labs-only server side done; waiting for Dharm's go: README/Devpost rewrite) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - **Chemistry-only, labs-only (Dharm's call, Sat ~14:00 and ~15:30):** every question is a hands-on lab, **no answer balloons**, clean modern lab look. Labs: Titration, Mystery Sample, Reaction Yield, Mix Lab, Balancer. Spec: `docs/build/LAB-SPEC.md`. Contract additive (ea3f6e9, e4b2099). Requests R-P2-1..3 below.
@@ -41,7 +41,8 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-29 | Labs only + Reaction Yield Lab + lab spec | ✅ | e4b2099 | No balloons: no-lab questions get one reader repair, then dropped; coach can't serve one. stoich.ts (molar masses, g→mol→ratio→g/mol/mL) + stoich_lab; code writes heavy-metal warnings. Real scan: 5/5 labs in ~11 s. docs/build/LAB-SPEC.md for Shweta (62a6103) |
 
 ## Requests to Shweta
-<!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · **Read `docs/build/LAB-SPEC.md` first** (Dharm's decision: chemistry only, every question a lab, **no answer balloons**, clean modern lab look). Then build the **lab bench + Titration Lab** (§1–3). · The showcase · by ~20:30
+<!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · what you need · why · which task waits on it -->
+- [ ] R-P2-1 · **Read `docs/build/LAB-SPEC.md` first** (Dharm's decision: chemistry only, every question a lab, **no answer balloons**, clean modern lab look). Then build the **lab bench + Titration Lab** (§1–3). · The showcase · by ~20:30
 - [ ] R-P2-2 · **Mystery Sample** (LAB-SPEC §4) · second deep lab · by ~23:00 (Merge 3)
 - [ ] R-P2-3 · **Reaction Yield Lab** (§5) + move Mix Lab / Balancer onto the bench (§6) · stoichiometry needs a lab now · before the 3 AM freeze
 - Fixture `/play/fixture` has one question per lab: q1 titration · q2 mystery · q3 mix · q4 balancer · q5 reaction yield (`stoich`).
