@@ -2,7 +2,8 @@
 // src/three/effects/Burst.tsx: one-shot instanced particle burst (confetti on correct, coral pop on wrong).
 // ≤ 300 instances (05 §8 budget). Re-mount (change `key`) to fire again.
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "@/game/settings";
 import { Color, InstancedMesh, Object3D, Vector3 } from "three";
 import { rng } from "./rng";
 
@@ -15,9 +16,12 @@ export type BurstProps = {
   size?: number;
 };
 
-export function Burst({ position, colors, count = 90, speed = 3.2, life = 1.8, size = 0.06, seed = 7 }: BurstProps & { seed?: number }) {
+export function Burst({ position, colors, count = 90, speed: fullSpeed = 3.2, life = 1.8, size = 0.06, seed = 7 }: BurstProps & { seed?: number }) {
   const mesh = useRef<InstancedMesh>(null);
-  const n = Math.min(300, count);
+  // Reduced motion: a small, gentle burst instead of a big one (read once per mount).
+  const [reduced] = useState(() => useSettings.getState().reducedMotion);
+  const n = Math.min(300, reduced ? Math.ceil(count / 4) : count);
+  const speed = reduced ? fullSpeed * 0.4 : fullSpeed;
   const parts = useMemo(
     () => {
       const rand = rng(seed + Math.round(position[0] * 1000));

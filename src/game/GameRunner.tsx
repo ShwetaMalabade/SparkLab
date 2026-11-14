@@ -20,6 +20,8 @@ import { GameHud } from "./GameHud";
 import { buildAttempt, scoreAnswer } from "./scoring";
 import { subscribe, useGame, type GameSession, type LockResult, type Phase, type TraceEntry } from "./store";
 import { TraceDrawer } from "./TraceDrawer";
+import { useSettings } from "./settings";
+import { playSfx } from "./sfx";
 import { pickTemplate } from "./templates";
 import { sayNext, sayNow, stopSpeaking } from "./voice";
 
@@ -114,6 +116,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
         lastResult: { ...r, points }, caption: `${r.correct ? "✓" : "✗"} ${why}`, coachLine: null,
       });
       loop.current.setPhase("reveal");
+      playSfx(r.correct ? "correct" : "wrong");
       sayNow(why);
 
       // Both calls at once: the phone updates from the attempt, the coach gets it inline.
@@ -238,7 +241,8 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
   const tpl = question ? pickTemplate(question) : null;
   const accent = question?.subject === "chemistry" ? CHEMISTRY : PHYSICS;
   const onLock = (r: LockResult) => loop.current.lock(r);
-  const still = phase === "play" || !!tpl?.def.still; // no camera sway while aiming at targets
+  const reducedMotion = useSettings((s) => s.reducedMotion);
+  const still = phase === "play" || !!tpl?.def.still || reducedMotion; // no camera sway while aiming (or if reduced motion)
   const templateHint = useGame((s) => s.templateHint);
   const avatar = tpl?.def.avatar ?? { position: [0, -0.2, -2.2] as [number, number, number], scale: 0.9 };
 
@@ -249,7 +253,15 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
         {question && tpl?.def.Scene && <tpl.def.Scene key={question.id} question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />}
       </Arena>
       <WorldLabelsLayer />
-      {question && tpl && <tpl.def.Overlay key={question.id} question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />}
+      {question && tpl && (
+        // Fade each new question in (opacity only, so dwell-target rects never move).
+        <div key={question.id} className="pointer-events-none absolute inset-0 animate-[qfade_0.45s_ease-out]">
+          <tpl.def.Overlay question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />
+        </div>
+      )}
+      <style>{`@keyframes qfade { from { opacity: 0 } to { opacity: 1 } }${
+        reducedMotion ? " *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }" : ""
+      }`}</style>
       <GameHud
         accent={accent}
         hint={phase === "next" ? "Raise both hands (or Enter) for the next question" : templateHint ?? (tpl ? tpl.def.hint(question!) : "")}

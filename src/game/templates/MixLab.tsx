@@ -16,6 +16,7 @@ import type { Side } from "@/motion/types";
 import { Bubbles, type Place } from "@/three/effects/Bubbles";
 import { Precipitate } from "@/three/effects/Precipitate";
 import { ChemText } from "../ChemText";
+import { playSfx } from "../sfx";
 import { subscribe, useGame, type LockResult } from "../store";
 import { AnswerBalloons } from "./AnswerBalloons";
 import type { TemplateDef, TemplateProps } from "./types";
@@ -139,7 +140,10 @@ function Overlay(props: TemplateProps) {
         const a = beakers[st.held.left!].formula;
         const b = beakers[st.held.right!].formula;
         const tries = [...st.tries, [a, b] as [string, string]].slice(0, 4);
-        if (isPair(question, a, b)) useMix.setState({ status: "reacting", statusAt: now, tries });
+        if (isPair(question, a, b)) {
+          useMix.setState({ status: "reacting", statusAt: now, tries });
+          playSfx("fizz", 0.5);
+        }
         else useMix.setState({ status: "wrong", statusAt: now, tries, wrong: st.wrong + 1 });
       } else if (st.status === "wrong" && el >= WRONG_MS) {
         if (st.wrong >= MAX_WRONG) {

@@ -6,6 +6,8 @@ import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 import { getClassCode } from "@/lib/client/api";
 import { warmVoices } from "@/lib/speak";
+import { loadSettings, useSettings } from "./settings";
+import { preloadSfx } from "./sfx";
 import { CameraView } from "@/motion/CameraView";
 import { engine, L_EL, L_SH, L_WR, NOSE, R_EL, R_SH, R_WR } from "@/motion/gestures";
 import type { AimMode, MotionFrame } from "@/motion/types";
@@ -32,6 +34,10 @@ export function Calibrate({ onStart, accent = "cyan" }: { onStart: (r: Calibrati
   const cam = useGame((s) => s.cam);
   const [checks, setChecks] = useState<Checks>(initial);
   const [leftHanded, setLeftHanded] = useState(false);
+  const sound = useSettings((s) => s.sound);
+  const reducedMotion = useSettings((s) => s.reducedMotion);
+  const setSettings = useSettings((s) => s.set);
+  useEffect(() => loadSettings(), []);
   const [aimMode, setAimMode] = useState<AimMode>("forearm");
   const [nickname, setNickname] = useState("");
   const [qr, setQr] = useState<{ url: string; code: string } | null>(null);
@@ -111,6 +117,7 @@ export function Calibrate({ onStart, accent = "cyan" }: { onStart: (r: Calibrati
     if (started.current) return;
     started.current = true;
     warmVoices(); // the click/keypress is the user activation that unlocks speech
+    preloadSfx();
     engine.setOptions({ leftHanded, aimMode });
     onStart({ nickname: nickname.trim() || "Player", leftHanded, aimMode, calibrated });
   };
@@ -163,6 +170,8 @@ export function Calibrate({ onStart, accent = "cyan" }: { onStart: (r: Calibrati
         <div className="flex flex-wrap gap-2 text-sm">
           <Toggle on={leftHanded} onClick={() => setLeftHanded((x) => !x)} label="Left-handed" />
           <Toggle on={aimMode === "fullArm"} onClick={() => setAimMode((m) => (m === "forearm" ? "fullArm" : "forearm"))} label="Aim with full arm" />
+          <Toggle on={sound} onClick={() => setSettings({ sound: !sound })} label="Sound" />
+          <Toggle on={reducedMotion} onClick={() => setSettings({ reducedMotion: !reducedMotion })} label="Reduced motion" />
           <span className="rounded-full border border-line px-3 py-1 text-muted" title="Standing mode is not available">Seated</span>
         </div>
 

@@ -19,6 +19,7 @@ import {
   type Coefs,
 } from "../balancer";
 import { ChemText, cpk } from "../ChemText";
+import { playSfx } from "../sfx";
 import { subscribe, useGame } from "../store";
 import type { TemplateDef, TemplateProps } from "./types";
 
@@ -98,6 +99,7 @@ function Overlay({ question, worksheet, phase, paused, onLock }: TemplateProps) 
       if (v === cur) return useBal.setState({ selected: i });
       const coefs = setFlat(st.coefs, i, v);
       useBal.setState({ coefs, selected: i, steps: [...st.steps, flat(coefs)].slice(-30) });
+      playSfx("pop", 0.25);
     };
     const lock = (input: InputSource, trapNow: boolean) => {
       if (!ok()) return;

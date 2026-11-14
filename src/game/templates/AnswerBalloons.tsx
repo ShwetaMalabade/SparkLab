@@ -12,6 +12,7 @@ import type { TQuestion } from "@/lib/schema";
 import { getTargetRect, useTarget } from "@/motion/targets";
 import type { InputSource } from "@/motion/types";
 import { Burst } from "@/three/effects/Burst";
+import { playSfx } from "../sfx";
 import { subscribe, useGame, type LockResult } from "../store";
 import type { TemplateDef, TemplateProps } from "./types";
 
@@ -59,6 +60,7 @@ function Overlay({ question, phase, paused, onLock }: TemplateProps) {
         input, hoverTrace: L.trace.slice(-20),
       };
       console.info("[balloons] lock-in", result);
+      playSfx("pop");
       L.onLock(result);
     };
     const offs = [

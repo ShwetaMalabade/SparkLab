@@ -16,6 +16,7 @@ import { Confetti } from "@/three/effects/Confetti";
 import { Trail } from "@/three/effects/Trail";
 import { Pinned, WorldAnchor } from "@/three/WorldLabels";
 import { arc, choiceNumber, fieldLength, G, position, range, speedForRange, speedFromPower } from "../physics";
+import { playSfx } from "../sfx";
 import { subscribe, useGame, type LockResult } from "../store";
 import { AnswerBalloons } from "./AnswerBalloons";
 import type { TemplateDef, TemplateProps } from "./types";
@@ -160,6 +161,7 @@ function Overlay(props: TemplateProps) {
         const speed = Math.round(sp * 10) / 10;
         const landedM = Math.round(range(speed, thetaDeg, K.g) * 10) / 10;
         useLauncher.setState({ flight: { id: L.nextId++, thetaDeg, speed, landedM, elapsed: 0, landedAt: null } });
+        playSfx("whoosh");
       }),
       subscribe("command", (e) => {
         const L = live.current;
