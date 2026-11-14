@@ -279,11 +279,19 @@ export class GestureEngine {
     // Finger tracker live for this hand: an open hand never selects (resting is safe), a fist CLOSING on a target
     // selects at once (sliding an already-closed fist onto it does not), pointing fills the ring.
     // Without the finger tracker (failed to load / no hand seen) the plain dwell below runs.
-    const hand = useGame.getState().hands[side];
+    const G = useGame.getState();
+    const hand = G.hands[side];
     const live = t - hand.seen < 400;
+    // Finger tracker loading, or ready but not seeing this hand: never select by gesture (no surprise picks).
+    // Only if it failed to load do we fall back to plain dwell.
+    const fingerMode = G.handsStatus === "loading" || G.handsStatus === "ready";
     const wasFist = this.lastShape[side] === "fist";
     this.lastShape[side] = live ? hand.shape : "other";
     if (!id || !dwellArmed || t < st.cooldownUntil) return 0;
+    if (fingerMode && !live) {
+      st.enterT = t;
+      return 0;
+    }
     if (live) {
       if (hand.shape === "fist") {
         if (wasFist) return 1; // still holding: no repeat

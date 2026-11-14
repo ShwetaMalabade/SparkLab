@@ -45,7 +45,14 @@ export function MotionProvider({ children, camera = true }: { children: ReactNod
         engine.reset();
         // Finger tracker (open / point / fist) loads in the background; until then the plain dwell rules run.
         let hands: HandLandmarker | null = null;
-        getHands().then((h) => void (hands = cancelled ? null : h)).catch(() => {});
+        useGame.getState().setHandsStatus("loading");
+        getHands()
+          .then((h) => {
+            if (cancelled) return;
+            hands = h;
+            useGame.getState().setHandsStatus("ready");
+          })
+          .catch(() => !cancelled && useGame.getState().setHandsStatus("failed"));
         stopLoop = startLoop(video, landmarker, (pts, t) => {
           const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
           engine.process(pts, t, vw, vh, window.innerWidth, window.innerHeight);

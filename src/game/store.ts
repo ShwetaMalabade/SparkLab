@@ -31,6 +31,9 @@ export type MotionSlice = {
   /** Finger tracker: per-hand shape (open / point / fist) + tilt. `seen` = last detection time (performance.now). */
   hands: Record<Side, HandState>;
   setHands: (h: Record<Side, HandState>) => void;
+  /** Finger tracker status: while "loading" nothing is selected by gesture; "failed" → plain dwell fallback. */
+  handsStatus: "off" | "loading" | "ready" | "failed";
+  setHandsStatus: (s: "off" | "loading" | "ready" | "failed") => void;
   emit: (e: MotionEvent) => void;
   arm: (type: GestureType, on?: boolean) => void;
   resetArming: () => void;
@@ -118,6 +121,8 @@ export const useGame = create<MotionSlice & GameSlice>()((set, get) => ({
   setCursors: (cursors) => set({ cursors }),
   hands: { left: noHand, right: noHand },
   setHands: (hands) => set({ hands }),
+  handsStatus: "off",
+  setHandsStatus: (handsStatus) => set({ handsStatus }),
 
   emit: (e) => {
     // Disarmed gestures are dropped for every input source, so keyboard C can't mix with one beaker either.

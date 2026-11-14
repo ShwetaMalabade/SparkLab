@@ -90,7 +90,7 @@ const PLAYER = { x: 0, z: 0, heading: Math.PI };
 export function LabWorld(props: LabWorldProps) {
   return (
     <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 40%, #3A3160 0%, #1A1530 75%)" }}>
-      <Canvas shadows="soft" dpr={[1, 1.75]} camera={{ position: [8, 10, 10], fov: 34, near: 0.1, far: 80 }} gl={{ antialias: true, alpha: true }}>
+      <Canvas shadows dpr={[1, 1.75]} camera={{ position: [8, 10, 10], fov: 34, near: 0.1, far: 80 }} gl={{ antialias: true, alpha: true }}>
         <hemisphereLight args={["#FFF4E0", "#5B4B7A", 0.45]} />
         <directionalLight
           castShadow
