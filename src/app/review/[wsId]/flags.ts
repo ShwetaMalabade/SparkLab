@@ -20,4 +20,5 @@ export const TEMPLATE: Record<TQuestion["template"], { icon: string; label: stri
   answer_balloons: { icon: "🎈", label: "Answer Balloons" },
   titration_lab: { icon: "💧", label: "Titration Lab" },
   mystery_sample: { icon: "🔍", label: "Mystery Sample" },
+  stoich_lab: { icon: "⚗️", label: "Reaction Yield Lab" },
 };

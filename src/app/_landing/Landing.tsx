@@ -69,7 +69,7 @@ export function Landing() {
             Homework <span className="text-cyan">Arena</span>
           </h1>
           <p className="mt-3 max-w-md text-lg text-muted">
-            Snap a physics or chemistry worksheet. Play it as a 3D lab with your hands. <span className="text-violet">AI writes</span>,{" "}
+            Snap a chemistry worksheet. Run every question as a real lab experiment with your hands. <span className="text-violet">AI writes</span>,{" "}
             <span className="text-lime">code checks</span> every number.
           </p>
         </div>

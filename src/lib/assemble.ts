@@ -1,13 +1,20 @@
 // src/lib/assemble.ts — code turns agent drafts into a playable, verified Question.
 import { z } from "zod";
-import { ReadQuestion, DesignQuestion, Question, Reaction, Misconception, type TQuestion, type TTitrationLab, type TMysteryLab } from "./schema";
+import { ReadQuestion, DesignQuestion, Question, Reaction, Misconception, type TQuestion, type TTitrationLab, type TMysteryLab, type TStoichLab } from "./schema";
 import { buildNumericChoices, relDiff } from "./verifyPhysics";
 import { isBalanced, splitEquation, sameSpecies, solubility, normalizeChem, withCoefficients } from "./chem";
 import { analyteMolarityFrom, checkScenario, curve, equivalenceML, INDICATORS, indicatorFits, phAt, type Scenario } from "./acidBase";
 import { COMPOUNDS, lookupCompound, mysteryDistractors, MYSTERY_MISCONCEPTIONS, observeAll, TESTS } from "./ions";
+import { isGas, solveStoich } from "./stoich";
 
 type R = z.infer<typeof ReadQuestion>; type D = z.infer<typeof DesignQuestion>; type Rx = z.infer<typeof Reaction>;
 const HEAVY = /(Pb|Hg|Ba|Cr|Cd|As|Tl)/;
+// Code's own standard warning per heavy metal, used when the reader left "hazard" empty (seen in real scans).
+const HAZARD: [RegExp, string][] = [[/Pb/, "Lead compounds are toxic"], [/Hg/, "Mercury compounds are very toxic"], [/Ba/, "Soluble barium compounds are toxic"],
+  [/Cr/, "Chromium compounds can be toxic"], [/Cd/, "Cadmium compounds are toxic"], [/As/, "Arsenic compounds are very toxic"], [/Tl/, "Thallium compounds are very toxic"]];
+/** Chemistry-only build: every question must be a hands-on lab; answer balloons are no longer shown to students. */
+export const NO_LAB = "no lab can simulate this question: give it a titration, a mystery compound, a stoichiometry block, a 2-reactant reaction or a balancing equation";
+export const isLab = (template: string) => template !== "answer_balloons";
 const BLOCK = /explosiv|detonat|weapon|nitroglycerin|TATP|thermite|nerve agent|chlorine gas at home/i;
 
 /** Deterministic shuffle (same question id → same order), so replays match live runs. */
@@ -86,6 +93,33 @@ export function buildTitration(r: R, answer: number | null): { lab?: TTitrationL
   };
 }
 
+const UNIT_BY_ASK = { mass_g: /^g$/, moles: /^mol$/, gas_volume_ml: /^(ml|mL|cm3|cm\^3|cm³)$/ } as const;
+/** Reaction Yield Lab: code redoes grams → moles → mole ratio → answer from the periodic table and the balanced
+ *  equation, and checks the AI's formula agrees (2 %: worksheets round molar masses). Given key "m" (the weighed mass)
+ *  wins, so a Review edit or a coach variant moves the lab with it. */
+export function buildStoich(r: R, answer: number | null): { lab?: TStoichLab; errors: string[] } {
+  const d = r.stoich!;
+  const massG = r.given.m?.value ?? d.known.massG;
+  const sc = { equation: d.equation, known: { formula: d.known.formula, massG }, target: { formula: d.target.formula }, ask: d.ask, gasMolarVolumeL: d.gasMolarVolumeL };
+  const out = solveStoich(sc);
+  if (!out.ok) return { errors: [`${r.id}: stoichiometry: ${out.error}`] };
+  if (!UNIT_BY_ASK[d.ask].test(r.unit ?? "")) return { errors: [`${r.id}: stoichiometry answer unit must be ${d.ask === "mass_g" ? "g" : d.ask === "moles" ? "mol" : "mL"} (got ${r.unit})`] };
+  const x = out.r;
+  if (answer == null || relDiff(answer, x.answer) > 0.02)
+    return { errors: [`${r.id}: stoichiometry formula gives ${answer} but grams → moles → ${x.coefTarget}:${x.coefKnown} ratio gives ${+x.answer.toPrecision(4)}; fix the formula (mind the mole ratio and molar masses)`] };
+  const gas = isGas(d.target.formula);
+  const round = (n: number, p = 4) => +n.toPrecision(p);
+  return {
+    errors: [],
+    lab: {
+      ...d, known: { ...d.known, massG },
+      coefKnown: x.coefKnown, coefTarget: x.coefTarget, mmKnown: round(x.mmKnown, 5), mmTarget: round(x.mmTarget, 5),
+      molesKnown: round(x.molesKnown), molesTarget: round(x.molesTarget), answer: round(x.answer),
+      targetIsGas: gas, gasVolumeML: gas ? round(x.molesTarget * (d.gasMolarVolumeL ?? 24.0) * 1000) : null,
+    },
+  };
+}
+
 /** Mystery Sample: code decides every observation and picks the wrong answers (compounds that look alike on most tests). */
 export function buildMystery(r: R): { lab?: TMysteryLab; correct?: string; wrong?: { misconceptionId: string; text: string; why: string }[]; added?: M[]; errors: string[] } {
   const c = lookupCompound(r.mystery!.compound);
@@ -111,7 +145,7 @@ export function assemble(r: R, d: D, origin: "worksheet" | "variant" = "workshee
   let correctText = ""; let wrong: { misconceptionId: string; text: string; why: string }[] = [];
   let answer = { value: null as number | null, unit: r.unit, text: r.answerText };
   let formula: string | null = null; let template = d.template; let equation = r.equation; let reaction = r.reaction;
-  let titration: TTitrationLab | null = null; let mystery: TMysteryLab | null = null; let added: M[] = [];
+  let titration: TTitrationLab | null = null; let mystery: TMysteryLab | null = null; let stoich: TStoichLab | null = null; let added: M[] = [];
 
   if (r.formula) {                                                  // ---- numeric
     const key = r.printedAnswer ? parseFloat(r.printedAnswer.replace(/[^\d.eE+-]/g, "")) : null;
@@ -125,6 +159,10 @@ export function assemble(r: R, d: D, origin: "worksheet" | "variant" = "workshee
       const t = buildTitration(r, out.correct.value);
       if (t.errors.length) return { errors: [...errors, ...t.errors], flags, notes };
       titration = t.lab!; flags.push(...t.flags); template = "titration_lab";
+    } else if (r.stoich) {                                          // ---- stoichiometry: same numeric choices + code's lab data
+      const st = buildStoich(r, out.correct.value);
+      if (st.errors.length) return { errors: [...errors, ...st.errors], flags, notes };
+      stoich = st.lab!; template = "stoich_lab";
     }
   } else if (r.mystery) {                                           // ---- identify the unknown: code builds every choice
     const m = buildMystery(r);
@@ -149,6 +187,10 @@ export function assemble(r: R, d: D, origin: "worksheet" | "variant" = "workshee
     const fitsBalancer = coefs.length <= 4 && Math.max(...coefs) <= 9 && !isBalanced(allOnes).balanced;
     if (template === "equation_balancer" && !fitsBalancer) { template = "answer_balloons"; flags.push("template_fallback"); }
   } else {                                                          // ---- reaction / conceptual
+    if (reaction && !reaction.hazard) {
+      const metal = HAZARD.find(([re]) => [...reaction!.reactants, ...reaction!.products].some((x) => re.test(x.formula)));
+      if (metal) reaction = { ...reaction, hazard: metal[1] };
+    }
     if (reaction) { const rxErr = checkReaction(reaction); if (rxErr.length) return { errors: [...errors, ...rxErr.map((x) => `${r.id}: ${x}`)], flags, notes }; }
     correctText = r.answerText;
     wrong = d.wrong.filter((w) => w.text).map((w) => ({ misconceptionId: w.misconceptionId, text: w.text!, why: w.why }));
@@ -159,7 +201,7 @@ export function assemble(r: R, d: D, origin: "worksheet" | "variant" = "workshee
   const mixOk = !!reaction && reaction.reactants.length === 2;
   if ((template === "projectile_launcher" && !launcherOk) || (template === "mix_lab" && !mixOk)) { template = "answer_balloons"; flags.push("template_fallback"); }
   if (template === "equation_balancer" && !equation) { template = "answer_balloons"; flags.push("template_fallback"); }
-  if ((template === "titration_lab" && !titration) || (template === "mystery_sample" && !mystery)) { template = "answer_balloons"; flags.push("template_fallback"); }
+  if ((template === "titration_lab" && !titration) || (template === "mystery_sample" && !mystery) || (template === "stoich_lab" && !stoich)) { template = "answer_balloons"; flags.push("template_fallback"); }
   let lock = d.params.lock ?? "none";
   if (template === "projectile_launcher") lock = "v" in r.given && "theta" in r.given ? (lock === "angle" ? "angle" : "speed") : "v" in r.given ? "speed" : "angle";
 
@@ -170,7 +212,7 @@ export function assemble(r: R, d: D, origin: "worksheet" | "variant" = "workshee
   const ordered = shuffle([{ text: correctText, correct: true, misconceptionId: null as string | null, why: d.correctWhy }, ...uniq.map((w) => ({ ...w, correct: false }))], r.id);
   const q = Question.safeParse({
     id: r.id, origin, parentId, subject: r.subject, topic: r.topic, concept: r.concept, template,
-    params: { lock, decoys: d.params.decoys }, prompt: r.prompt, given: r.given, formula, answer, reaction, equation, titration, mystery,
+    params: { lock, decoys: d.params.decoys }, prompt: r.prompt, given: r.given, formula, answer, reaction, equation, titration, mystery, stoich,
     choices: ordered.map((c, i) => ({ id: "ABCD"[i], text: c.text, correct: c.correct, misconceptionId: c.misconceptionId, why: c.why })),
     flags: [...flags, ...(r.confidence < 0.6 ? ["low_confidence_read"] : [])],
   });

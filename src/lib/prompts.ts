@@ -29,12 +29,15 @@ Return ONLY JSON: {"title": string, "questions": [ ... ]}. Each question:
      "titrant": {"formula","name","molarity"}, "indicator": "phenolphthalein"|"methyl_orange"|"bromothymol_blue" (phenolphthalein if none is named),
      "endpointML": a measured end-point volume given as DATA in the question (never from an answer key), else null}; otherwise null,
   "mystery": for "identify the unknown substance from tests" questions: {"compound": the answer's formula}; otherwise null,
+  "stoich": for "how many grams / moles / mL of gas" questions: {"equation": balanced, "known": {"formula","name","massG"} (the reactant
+     whose mass is given), "target": {"formula","name"}, "ask": "mass_g"|"gas_volume_ml"|"moles", "gasMolarVolumeL": 22.4|22.7|24.0|24.5 or null}; otherwise null,
   "confidence": 0–1, how sure you are that you read the page correctly }
 Rules:
 - Max 10 questions. Skip anything that is not chemistry.
 - Titrations: "given" uses Ma (analyte molarity, M), Va (analyte volume, mL), Mt (titrant molarity, M), Vt (end-point volume, mL);
   "formula" includes the mole ratio (H2SO4 and Ba(OH)2 count 2); "unit" is "mL" for a volume answer or "M" for a concentration.
-- Stoichiometry: put the molar masses you use in "given" (e.g. MMg: 24.3 g/mol) and write the full mass-to-mass formula.
+- Stoichiometry: "given" uses m (the known mass, g) plus the molar masses you use (e.g. MMg: 24.3 g/mol) and, for gas volumes, Vm (L/mol);
+  write the full formula with the mole ratio; "unit" is "g", "mol" or "mL".
 - Write the formula; do NOT put the final number in "formula". Code computes it.
 - Chemical formulas as plain text: "Pb(NO3)2", "Ba(OH)2·8H2O". No charges. States: s, l, g, aq.
 - If a value is unreadable, make your best guess, put it in [brackets] in "prompt", and lower "confidence".
@@ -44,7 +47,7 @@ export const DESIGNER_PROMPT = (questionsJson: string, registryJson: string) => 
 You are Agent 2, Mistake Modeler and Level Designer for a 3D chemistry lab game played with hand gestures.
 For EACH question, return:
 { "id",
-  "template": "titration_lab"|"mystery_sample"|"mix_lab"|"equation_balancer"|"answer_balloons", "templateReason": ≤ 100 chars,
+  "template": "titration_lab"|"mystery_sample"|"stoich_lab"|"mix_lab"|"equation_balancer"|"answer_balloons", "templateReason": ≤ 100 chars,
   "params": {"decoys": up to 2 extra chemicals for the Mix Lab bench, as {"formula","name","state"}},
   "misconceptions": 1–4 mistakes real students make on THIS question (never more than 4; wrong options may share one): {"id": snake_case, "label": ≤ 60 chars, "why": ≤ 140 chars, "concept"},
   "wrong": 4–5 wrong options, each {"misconceptionId": one of the ids in "misconceptions", "wrongFormula", "text", "why"}:
@@ -57,8 +60,9 @@ Rules:
 - Reuse ids from this registry when the mistake is the same: ${registryJson}
 - Each wrong formula must model one real, specific mistake and give a value more than 5% away from the right answer and from the other wrong ones.
   Watch numbers that make two mistakes give the same value (e.g. equal molarities). Give a 5th spare option in case code rejects one.
-- Template guide: titration → titration_lab; identify an unknown from tests → mystery_sample; "what happens when you mix" with exactly
-  2 reactants → mix_lab; balancing with ≤ 4 species → equation_balancer; anything else → answer_balloons.
+- Template guide (every question is a hands-on lab): titration → titration_lab; identify an unknown from tests → mystery_sample;
+  grams / moles / gas volume from a reaction → stoich_lab; "what happens when you mix" with exactly 2 reactants → mix_lab;
+  balancing with ≤ 4 species → equation_balancer. If none fits, use answer_balloons: code will drop the question.
 - Titrations: model real mistakes such as flipping the molarity ratio, assuming equal volumes, or ignoring a 2:1 mole ratio.
 - Mystery questions (they have a "mystery" field): code writes the answer options from its test table, so return one
   misconception and 3 wrong options with "text": "-".
@@ -87,7 +91,8 @@ Choose ONE action:
 - "variant": a NEW question on the SAME concept with NEW numbers or substances, aimed at targetMisconceptionId.
    Put it in "newQuestion" as {"read": {...}, "design": {...}} using EXACTLY the fields of "lastQuestionDrafts" in the context:
    copy that structure, change the prompt, the numbers in "given" (or the substances), and keep "formula" using only keys of "given".
-   For a titration, change Ma/Va/Mt (or Vt) in "given" and the same numbers in "titration"; for a mystery, pick a different compound.
+   For a titration, change Ma/Va/Mt (or Vt) in "given" and the same numbers in "titration"; for stoichiometry, change m in "given" and
+   "stoich.known.massG"; for a mystery, pick a different compound. The new question must keep its lab field (no lab = not shown).
    In "read": "printedAnswer": null, "printedChoices": null. In "design": 4 wrong options (reuse the wrong formulas from
    lastQuestionDrafts when they still fit). Code computes every number, so never write the answer or option values.
    Choose numbers where every listed mistake gives a clearly different value (avoid equal molarities in titrations).

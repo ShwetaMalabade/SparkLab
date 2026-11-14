@@ -8,7 +8,7 @@ import type { z } from "zod";
 import { readWorksheet, repairRead, type TReadOut } from "./agents/reader";
 import { designQuestions, repairDesign, type TDesignOut } from "./agents/designer";
 import type { AskResult } from "./ai";
-import { assemble, checkReaction } from "./assemble";
+import { assemble, checkReaction, isLab, NO_LAB } from "./assemble";
 import { isBalanced } from "./chem";
 import { db, newId } from "./db";
 import { compute, lintFormula, relDiff } from "./verifyPhysics";
@@ -135,6 +135,7 @@ export async function ingest(
     const r = reads.get(id)!, d = designs.get(id);
     if (!d) { failing.set(id, [`${id}: no design for this question`]); return; }
     const out = assemble(r, d);
+    if (out.question && !isLab(out.question.template)) { built.delete(id); failing.set(id, [`${id}: ${NO_LAB}`]); return; }
     if (out.question) { built.set(id, out.question); failing.delete(id); for (const m of out.added ?? []) codeMis.set(m.id, m); }
     else failing.set(id, out.errors);
   };

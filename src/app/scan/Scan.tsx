@@ -79,7 +79,7 @@ export function Scan() {
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-16">
       <header>
         <h1 className="text-4xl font-bold">Scan a worksheet</h1>
-        <p className="mt-2 text-muted">A clear photo of one physics or chemistry page. AI reads and solves it; code checks every number.</p>
+        <p className="mt-2 text-muted">A clear photo of one chemistry page. AI turns each question into a lab; code checks every number.</p>
       </header>
 
       {phase === "pick" && (

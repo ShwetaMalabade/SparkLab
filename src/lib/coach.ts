@@ -10,6 +10,7 @@ import { DIRECTOR_PROMPT } from "./prompts";
 import { loadReplaySeed, recordedDecision } from "./replaySeed";
 import { Attempt, type Misconception, type TAttempt, type TQuestion, type TWorksheet } from "./schema";
 import { trimOverflow } from "./agents/designer";
+import { isLab } from "./assemble";
 import { loadDrafts, loadWorksheet, type Drafts } from "./worksheetStore";
 
 type M = z.infer<typeof Misconception>;
@@ -121,6 +122,10 @@ export async function decideNext(
     out = r.data;
     step = last ? applyDirector(ws, session, last, out, now) : firstPick(ws, session, out);
   }
+
+  // Chemistry-only build: a coach question that no lab can simulate isn't served (no answer balloons).
+  if (step.question?.origin === "variant" && !isLab(step.question.template))
+    step = { ...fallbackNext(ws, session, "coach's question has no lab"), feedback: step.feedback, rejected: ["coach's question has no lab"] };
 
   // ---- persist: a passed variant, new mistakes, the student model, what we served
   const update: Record<string, unknown> = {};

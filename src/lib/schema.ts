@@ -6,7 +6,7 @@ export const Topic = z.enum([
   "reaction_prediction", "balancing_equations", "acid_base_ph", "stoichiometry",
   "other_physics", "other_chemistry",
 ]);
-export const Template = z.enum(["projectile_launcher", "mix_lab", "equation_balancer", "answer_balloons", "titration_lab", "mystery_sample"]);
+export const Template = z.enum(["projectile_launcher", "mix_lab", "equation_balancer", "answer_balloons", "titration_lab", "mystery_sample", "stoich_lab"]);
 const Quantity = z.object({ value: z.number(), unit: z.string() });
 const Hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
@@ -47,6 +47,23 @@ export const TitrationLab = z.object({
   startPH: z.number(), endPH: z.number(),                 // pH at 0 mL and at the end point
   curve: z.array(z.object({ ml: z.number(), pH: z.number() })).max(200),
 });
+/** Reader draft for a stoichiometry question (Reaction Yield Lab). */
+export const StoichDraft = z.object({
+  equation: z.string(),                                   // balanced
+  known: z.object({ formula: z.string(), name: z.string(), massG: z.number() }), // the reactant the student weighs
+  target: z.object({ formula: z.string(), name: z.string() }),
+  ask: z.enum(["mass_g", "gas_volume_ml", "moles"]),
+  gasMolarVolumeL: z.number().nullable(),                 // 22.4 / 22.7 / 24.0 / 24.5, only for gas volumes
+});
+/** Final Reaction Yield Lab data: every number below is computed by code (src/lib/stoich.ts). */
+export const StoichLab = StoichDraft.extend({
+  coefKnown: z.number(), coefTarget: z.number(),
+  mmKnown: z.number(), mmTarget: z.number(),              // g/mol from the periodic table
+  molesKnown: z.number(), molesTarget: z.number(),
+  answer: z.number(),                                     // in the asked unit (g, mL or mol)
+  targetIsGas: z.boolean(),
+  gasVolumeML: z.number().nullable(),                     // for the gas syringe (at gasMolarVolumeL, or 24.0 L/mol if not given)
+});
 export const TestId = z.enum(["flame", "naoh", "agno3", "bacl2", "hcl"]);
 /** Final Mystery Sample data: every observation and color comes from code (src/lib/ions.ts). */
 export const MysteryLab = z.object({
@@ -75,6 +92,7 @@ export const ReadQuestion = z.object({
   equation: z.string().nullable(),                        // balancing questions: the balanced answer
   titration: TitrationDraft.nullable().optional(),        // titration questions (Titration Lab)
   mystery: MysteryDraft.nullable().optional(),            // "identify the unknown" questions (Mystery Sample)
+  stoich: StoichDraft.nullable().optional(),              // stoichiometry questions (Reaction Yield Lab)
   confidence: z.number().min(0).max(1),
 });
 export const ReadOut = z.object({ title: z.string(), questions: z.array(ReadQuestion).min(1).max(10) });
@@ -127,6 +145,7 @@ const QuestionBase = z.object({
   equation: z.string().nullable(),
   titration: TitrationLab.nullable().optional(),          // template "titration_lab"
   mystery: MysteryLab.nullable().optional(),              // template "mystery_sample"
+  stoich: StoichLab.nullable().optional(),                // template "stoich_lab"
   choices: z.array(ChoiceBase).length(4),
   flags: z.array(z.string()).default([]),
 });
@@ -146,6 +165,7 @@ export const Worksheet = z.object({
 export type TQuestion = z.infer<typeof Question>;
 export type TTitrationLab = z.infer<typeof TitrationLab>;
 export type TMysteryLab = z.infer<typeof MysteryLab>;
+export type TStoichLab = z.infer<typeof StoichLab>;
 export type TWorksheet = z.infer<typeof Worksheet>;
 
 // ---------- Runtime records (server sets createdAt: new Date() on insert; never trust the client clock) ----------
