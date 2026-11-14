@@ -328,14 +328,15 @@ function DoorSign({ room, active, done, locked }: { room: Room; active: boolean;
     [room, done, locked],
   );
   const ref = useRef<Mesh>(null);
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     if (!ref.current) return;
     const m = ref.current.material as MeshStandardMaterial;
     m.emissiveIntensity = active ? 0.6 + Math.sin(clock.elapsedTime * 4) * 0.25 : 0.3;
     ref.current.position.y = 2.6 + (active ? Math.sin(clock.elapsedTime * 2) * 0.07 : 0);
+    ref.current.quaternion.copy(camera.quaternion); // always faces you, however the lab is rotated
   });
   return (
-    <mesh ref={ref} position={[room.doorX, 2.6, room.doorZ]} rotation={[-0.4, Math.PI / 4, 0]}>
+    <mesh ref={ref} position={[room.doorX, 2.6, room.doorZ]}>
       <planeGeometry args={[2.3, 0.58]} />
       <meshStandardMaterial map={map} emissive="#ffffff" emissiveMap={map} emissiveIntensity={0.3} transparent opacity={locked ? 0.65 : 1} />
     </mesh>
@@ -364,9 +365,12 @@ function Guide({ room }: { room: Room }) {
   );
 }
 
+/** Screen-relative moves: [forward, right]. Turned into world directions with the camera's yaw. */
 const KEYS: Record<string, [number, number]> = {
-  w: [-1, -1], arrowup: [-1, -1], s: [1, 1], arrowdown: [1, 1], a: [-1, 1], arrowleft: [-1, 1], d: [1, -1], arrowright: [1, -1],
+  w: [1, 0], arrowup: [1, 0], s: [-1, 0], arrowdown: [-1, 0], a: [0, -1], arrowleft: [0, -1], d: [0, 1], arrowright: [0, 1],
 };
+/** Orbit camera: yaw (radians, 0 = looking from +z), distance. Drag / Q,E / wheel change it. */
+const VIEW = { yaw: Math.atan2(8, 11), dist: 13.6, height: 11 };
 
 function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: RoomId) => void }) {
   const body = useRef<Group>(null);
@@ -402,22 +406,53 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
     };
     const up = (e: KeyboardEvent) => held.current.delete(e.key.toLowerCase());
     const blur = () => held.current.clear();
+    // Rotate the building: drag with the mouse, Q/E keys; zoom with the wheel.
+    let drag: number | null = null;
+    const pd = (e: PointerEvent) => void (drag = e.clientX);
+    const pm = (e: PointerEvent) => {
+      if (drag === null) return;
+      VIEW.yaw -= (e.clientX - drag) * 0.006;
+      drag = e.clientX;
+    };
+    const pu = () => void (drag = null);
+    const wheel = (e: WheelEvent) => {
+      VIEW.dist = MathUtils.clamp(VIEW.dist + e.deltaY * 0.01, 7, 22);
+      VIEW.height = VIEW.dist * 0.8;
+    };
+    const rot = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === "q") VIEW.yaw += 0.12;
+      if (k === "e") VIEW.yaw -= 0.12;
+    };
     window.addEventListener("keydown", down);
+    window.addEventListener("keydown", rot);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", blur);
+    window.addEventListener("pointerdown", pd);
+    window.addEventListener("pointermove", pm);
+    window.addEventListener("pointerup", pu);
+    window.addEventListener("wheel", wheel, { passive: true });
     return () => {
       window.removeEventListener("keydown", down);
+      window.removeEventListener("keydown", rot);
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
+      window.removeEventListener("pointerdown", pd);
+      window.removeEventListener("pointermove", pm);
+      window.removeEventListener("pointerup", pu);
+      window.removeEventListener("wheel", wheel);
     };
   }, []);
 
   useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
+    // Forward = away from the camera on the floor; right = screen right.
+    const fx = -Math.sin(VIEW.yaw), fz = -Math.cos(VIEW.yaw);
     let dx = 0, dz = 0;
     held.current.forEach((k) => {
-      dx += KEYS[k][0];
-      dz += KEYS[k][1];
+      const [f, r] = KEYS[k];
+      dx += f * fx + r * -fz;
+      dz += f * fz + r * fx;
     });
     const len = Math.hypot(dx, dz);
     const moving = len > 0;
@@ -443,7 +478,7 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
     if (shadow.current) shadow.current.position.set(PLAYER.x, 0.02, PLAYER.z);
     // Camera: smooth follow from above at an angle, framed on the student.
     const cx = MathUtils.clamp(PLAYER.x, -6, 6), cz = MathUtils.clamp(PLAYER.z, -5, 5);
-    camera.position.lerp(tmp.pos.set(cx + 8, 11, cz + 11), Math.min(1, dt * 2.5));
+    camera.position.lerp(tmp.pos.set(cx + Math.sin(VIEW.yaw) * VIEW.dist * 0.8, VIEW.height, cz + Math.cos(VIEW.yaw) * VIEW.dist * 0.8), Math.min(1, dt * 3));
     tmp.look.lerp(new Vector3(cx, 0.6, cz), Math.min(1, dt * 3));
     camera.lookAt(tmp.look);
 

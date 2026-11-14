@@ -320,7 +320,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
       <GameHud
         accent={accent}
         hint={
-          walking ? "WASD / arrow keys to walk · Enter: go straight there"
+          walking ? "WASD / arrows walk · drag or Q/E rotate · wheel zoom · Enter: go straight there"
           : phase === "next" ? "Raise both hands (or Enter) for the next question"
           : templateHint ?? (tpl ? tpl.def.hint(question!) : "")
         }
