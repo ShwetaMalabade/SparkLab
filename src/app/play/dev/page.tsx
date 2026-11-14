@@ -1,93 +1,111 @@
 "use client";
-// /play/dev: scratch page for the motion system (P1-01). Camera + Pose + landmarks, all on-device.
+// /play/dev: motion test bench (P1-01…P1-05). Camera + Pose, hand cursors, 4 dwell targets, every gesture armed,
+// debug overlay on D, and an event log. Everything also works keyboard-only.
 import { useEffect, useRef, useState } from "react";
-import { createPose, startCamera, startLoop, UPPER_BONES, type RawLandmark } from "@/motion/pose";
-
-type Status = "loading" | "ready" | "no-camera" | "error";
+import { subscribe, useGame } from "@/game/store";
+import { CameraView } from "@/motion/CameraView";
+import { DebugOverlay } from "@/motion/DebugOverlay";
+import { MotionProvider } from "@/motion/MotionProvider";
+import { useTarget } from "@/motion/targets";
+import type { MotionEvent } from "@/motion/types";
+import { HandCursors } from "@/three/HandCursor";
 
 export default function MotionDevPage() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState<Status>("loading");
-  const [info, setInfo] = useState({ fps: 0, delegate: "", points: 0 });
+  return (
+    <MotionProvider>
+      <DevBench />
+      <HandCursors />
+      <DebugOverlay />
+    </MotionProvider>
+  );
+}
+
+const TARGETS = ["A", "B", "C", "D"];
+
+function DevBench() {
+  const [log, setLog] = useState<MotionEvent[]>([]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const cam = useGame((s) => s.cam);
 
   useEffect(() => {
-    let stopCam: (() => void) | null = null;
-    let stopLoop: (() => void) | null = null;
-    let cancelled = false;
-    (async () => {
-      const video = videoRef.current!;
-      try {
-        stopCam = await startCamera(video);
-      } catch {
-        if (!cancelled) setStatus("no-camera");
-        return;
-      }
-      try {
-        const { landmarker, delegate } = await createPose();
-        if (cancelled) return landmarker.close();
-        setStatus("ready");
-        let frames = 0;
-        let since = performance.now();
-        stopLoop = startLoop(video, landmarker, (pts, t) => {
-          draw(canvasRef.current, video, pts);
-          frames++;
-          if (t - since >= 1000) {
-            setInfo({ fps: Math.round((frames * 1000) / (t - since)), delegate, points: pts?.length ?? 0 });
-            frames = 0;
-            since = t;
-          }
-        });
-      } catch {
-        if (!cancelled) setStatus("error");
-      }
-    })();
+    const { arm, resetArming } = useGame.getState();
+    arm("clap");
+    arm("fire");
+    const off = subscribe("*", (e) => {
+      setLog((l) => [...l.slice(-11), e]);
+      const key = e.type === "command" ? `cmd:${e.cmd}` : e.type;
+      setCounts((c) => ({ ...c, [key]: (c[key] ?? 0) + 1 }));
+      if (e.type === "dwell" && e.targetId) setPicked(e.targetId);
+      if (e.type === "command" && e.cmd === "pick" && e.value !== undefined) setPicked(`dev:${TARGETS[e.value]}`);
+    });
     return () => {
-      cancelled = true;
-      stopLoop?.();
-      stopCam?.();
+      off();
+      resetArming();
     };
   }, []);
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-4 px-4 py-16">
-      <h1 className="text-3xl font-bold">Motion dev</h1>
-      <p className="text-muted">
-        {status === "loading" && "Starting camera + pose…"}
-        {status === "no-camera" && "No camera (permission denied or none found). The game still works by keyboard."}
-        {status === "error" && "Pose model failed to load."}
-        {status === "ready" && `${info.fps} fps · ${info.delegate} · ${info.points} points`}
-      </p>
-      <div className="relative w-full max-w-[640px] overflow-hidden rounded-2xl border border-line">
-        {/* Mirrored for display only; MediaPipe reads the un-mirrored stream. */}
-        <video ref={videoRef} className="block w-full -scale-x-100" muted playsInline />
-        <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100" />
+    <main className="flex flex-1 flex-col gap-6 px-6 py-16">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Motion dev</h1>
+          <p className="text-muted">
+            cam: {cam} · <b>D</b> debug · Enter bothUp · C clap · ←/→ lean · Space fire · 1–4 pick · click = dwell
+          </p>
+        </div>
+        <CameraView className="h-[180px] w-[240px] rounded-xl border border-line" />
+      </header>
+
+      {/* Dwell targets: in the middle band (35–75% of the screen), ≥ 160 px and ≥ 40 px apart (04 §6). */}
+      <div className="mt-[8vh] flex flex-wrap justify-center gap-[60px]">
+        {TARGETS.map((id) => (
+          <DevTarget key={id} id={`dev:${id}`} label={id} picked={picked === `dev:${id}`} />
+        ))}
       </div>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-line bg-panel p-4">
+          <h2 className="mb-2 font-semibold">Counts</h2>
+          <div className="flex flex-wrap gap-2 font-mono text-sm">
+            {Object.entries(counts).map(([k, v]) => (
+              <span key={k} className="rounded bg-navy px-2 py-1">
+                {k}: {v}
+              </span>
+            ))}
+            <button className="rounded border border-line px-2 py-1 text-muted" onClick={() => setCounts({})}>
+              reset
+            </button>
+          </div>
+        </div>
+        <div className="rounded-xl border border-line bg-panel p-4 font-mono text-xs">
+          <h2 className="mb-2 font-sans text-base font-semibold">Events</h2>
+          {log.slice().reverse().map((e, i) => (
+            <div key={`${e.t}-${i}`}>
+              {e.type === "command" ? `cmd:${e.cmd} ${e.value ?? ""}` : e.type} {"side" in e && e.side ? e.side : ""}{" "}
+              {"targetId" in e && e.targetId ? `→ ${e.targetId}` : ""} {"ms" in e && e.ms ? `${e.ms}ms` : ""}{" "}
+              <span className="text-muted">[{e.source}]</span>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
 
-function draw(canvas: HTMLCanvasElement | null, video: HTMLVideoElement, pts: RawLandmark[] | null) {
-  if (!canvas) return;
-  const w = video.videoWidth || 640;
-  const h = video.videoHeight || 480;
-  if (canvas.width !== w) canvas.width = w;
-  if (canvas.height !== h) canvas.height = h;
-  const ctx = canvas.getContext("2d")!;
-  ctx.clearRect(0, 0, w, h);
-  if (!pts) return;
-  ctx.strokeStyle = "#22d3ee";
-  ctx.lineWidth = 3;
-  for (const [a, b] of UPPER_BONES) {
-    ctx.beginPath();
-    ctx.moveTo(pts[a].x * w, pts[a].y * h);
-    ctx.lineTo(pts[b].x * w, pts[b].y * h);
-    ctx.stroke();
-  }
-  for (const p of pts) {
-    ctx.fillStyle = p.visibility > 0.6 ? "#a3e635" : "#fb7185";
-    ctx.beginPath();
-    ctx.arc(p.x * w, p.y * h, 4, 0, Math.PI * 2);
-    ctx.fill();
-  }
+function DevTarget({ id, label, picked }: { id: string; label: string; picked: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mouse = useTarget(id, ref);
+  const over = useGame((s) => s.cursors.left.targetId === id || s.cursors.right.targetId === id);
+  return (
+    <div
+      ref={ref}
+      {...mouse}
+      className={`grid h-[180px] w-[220px] cursor-pointer select-none place-items-center rounded-2xl border-2 text-4xl font-bold transition-colors ${
+        picked ? "border-lime bg-lime/15 text-lime" : over ? "border-cyan bg-cyan/10" : "border-line bg-panel"
+      }`}
+    >
+      {label}
+    </div>
+  );
 }
