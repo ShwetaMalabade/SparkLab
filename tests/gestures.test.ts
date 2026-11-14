@@ -6,7 +6,8 @@ import { subscribe, useGame } from "../src/game/store";
 import { keyToEvent } from "../src/motion/keyboard";
 import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { checkClip, packFrame, replayClip, type Clip } from "../src/motion/clips";
 import { judge, speciesOf, trapped, atomCounts, trapFormula } from "../src/game/balancer";
 import { range, fieldLength, speedForRange, choiceNumber, arc, maxHeight } from "../src/game/physics";
 
@@ -196,6 +197,36 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
   const a = atomCounts(sp, c([1, 1], [2]));
   ok("atom counters: 1,1,2 → H 2|4, O 2|2", JSON.stringify(a.rows) === JSON.stringify([{ el: "H", left: 2, right: 4 }, { el: "O", left: 2, right: 2 }]));
   ok("X key → subscript trap", keyToEvent({ key: "x", repeat: false }, 0)?.type === "command");
+}
+
+// ---- Recorded-landmark clips (P1-19, docs/plan/04 §10) ----
+{
+  // 1) The replay pipeline itself, on a synthetic clip (pack → unpack → engine → expectations).
+  const frames: { t: number; lm: number[][] | null }[] = [];
+  let ct = 0;
+  const push = (f: RawLandmark[], ms: number) => { for (let i = 0; i < ms / 33; i++) frames.push(packFrame(f, (ct += 33))); };
+  const wide = body({ lw: { x: 520, y: 330 }, rw: { x: 120, y: 330 } });
+  const half = body({ lw: { x: 430, y: 330 }, rw: { x: 210, y: 330 } });
+  const shut = body({ lw: { x: 335, y: 330 }, rw: { x: 305, y: 330 } });
+  for (let k = 0; k < 2; k++) { push(wide, 1000); push(half, 33); push(shut, 400); }
+  const synth: Clip = {
+    name: "synthetic-clap-x2", recordedAt: "synthetic", video: { w: VW, h: VH }, screen: { w: SW, h: SH }, aimMode: "forearm",
+    leftHanded: false, arm: ["clap"], baseline: null, targets: {}, expect: { clap: 2, bothUp: 0 }, frames,
+  };
+  const r = replayClip(synth, 5e7);
+  ok("clip replay: synthetic 2 claps → 2 clap events", checkClip(synth, r).length === 0, JSON.stringify(r.counts));
+  const r2 = replayClip({ ...synth, arm: [] }, 6e7);
+  ok("clip replay: clap disarmed → 0 claps", (r2.counts.clap ?? 0) === 0);
+
+  // 2) Every recorded clip in tests/fixtures/ (record them on /play/dev → "Record a test clip").
+  const dir = "tests/fixtures";
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")).sort() : [];
+  if (!files.length) console.log("NOTE no recorded clips in tests/fixtures yet (record them on /play/dev)");
+  files.forEach((f, i) => {
+    const clip = JSON.parse(readFileSync(`${dir}/${f}`, "utf8")) as Clip;
+    const bad = checkClip(clip, replayClip(clip, 1e8 + i * 1e6));
+    ok(`recorded clip ${f}`, bad.length === 0, bad.join(" · "));
+  });
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

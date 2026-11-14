@@ -57,6 +57,7 @@ export class GestureEngine {
 
   private smoother = new PointSmoother();
   private frameListeners = new Set<(f: MotionFrame) => void>();
+  private rawListeners = new Set<(raw: RawLandmark[] | null, t: number, vw: number, vh: number, sw: number, sh: number) => void>();
   private hover: Record<Side, HoverState> = { left: freshHover(), right: freshHover() };
   private bothUpCount = 0;
   private bothUpLatched = false;
@@ -93,6 +94,14 @@ export class GestureEngine {
     };
   }
 
+  /** Every raw input frame, before any processing (the P1-19 clip recorder). */
+  onRaw(fn: (raw: RawLandmark[] | null, t: number, vw: number, vh: number, sw: number, sh: number) => void): () => void {
+    this.rawListeners.add(fn);
+    return () => {
+      this.rawListeners.delete(fn);
+    };
+  }
+
   reset() {
     this.smoother.reset();
     this.hover = { left: freshHover(), right: freshHover() };
@@ -105,6 +114,7 @@ export class GestureEngine {
 
   /** Feed one MediaPipe result. `screenW/H` = viewport size for the cursors. */
   process(raw: RawLandmark[] | null, t: number, videoW: number, videoH: number, screenW: number, screenH: number) {
+    this.rawListeners.forEach((fn) => fn(raw, t, videoW, videoH, screenW, screenH));
     this.fpsFrames++;
     if (t - this.fpsSince >= 1000) {
       this.fps = Math.round((this.fpsFrames * 1000) / (t - this.fpsSince));

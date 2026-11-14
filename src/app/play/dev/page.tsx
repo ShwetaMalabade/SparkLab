@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { subscribe, useGame } from "@/game/store";
 import { CameraView } from "@/motion/CameraView";
+import { ClipRecorder } from "@/motion/ClipRecorder";
 import { DebugOverlay } from "@/motion/DebugOverlay";
 import { MotionProvider } from "@/motion/MotionProvider";
 import { useTarget } from "@/motion/targets";
@@ -89,6 +90,7 @@ function DevBench() {
           ))}
         </div>
       </section>
+      <ClipRecorder />
     </main>
   );
 }

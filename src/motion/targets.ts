@@ -23,6 +23,16 @@ export function getTargetRect(id: string): Rect | null {
   return targets.get(id)?.rect() ?? null;
 }
 
+/** Every registered target's current rect (the clip recorder saves them so replays hit the same targets). */
+export function allTargetRects(): Record<string, Rect> {
+  const out: Record<string, Rect> = {};
+  for (const [id, t] of targets) {
+    const r = t.rect();
+    if (r) out[id] = r;
+  }
+  return out;
+}
+
 /** The enabled target under a viewport point, or null. Later registrations win on overlap. */
 export function hitTest(x: number, y: number): string | null {
   let hit: string | null = null;
