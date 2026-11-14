@@ -4,7 +4,7 @@
 import { subscribe, useGame } from "@/game/store";
 import { engine } from "./gestures";
 import type { RawLandmark } from "./pose";
-import { registerTarget, type Rect } from "./targets";
+import { withTargets, type Rect } from "./targets";
 import type { AimMode, Baseline, GestureType, MotionEvent } from "./types";
 
 /** What a clip must (and must not) produce when replayed. */
@@ -30,7 +30,7 @@ export const CLIP_PRESETS: ClipPreset[] = [
     { name: `aim-${deg}-fullarm`, label: `Aim ${deg}° (full arm)`, how: `Straight arm at ${deg}° from horizontal. Hold it.`, aimMode: "fullArm" as const, arm: [], expect: { theta: deg, thetaTol: 8 } },
   ]),
   { name: "hold-steady", label: "Hold steady (fire)", how: "Aim about 40° and hold completely still for 3 s, twice.", aimMode: "forearm", arm: ["fire"], expect: { fireMin: 1, clap: 0 } },
-  { name: "hover-a-pick-b", label: "Hover A, then pick B", how: "Rest a hand on target A for 1 s (don't pick), then move to B and hold until it picks.", aimMode: "forearm", arm: [], expect: { hover: { target: "dev:A", minMs: 500 }, dwell: "dev:B" } },
+  { name: "hover-a-pick-b", label: "Hover A, then pick B", how: "Move one hand onto target A and hold until it picks (ring fills), then move to B and hold until it picks.", aimMode: "forearm", arm: [], expect: { hover: { target: "dev:A", minMs: 500 }, dwell: "dev:B" } },
   { name: "drinking-water", label: "Drinking water", how: "Pick up a cup, drink, put it down. Twice.", aimMode: "forearm", arm: ["clap"], expect: { clap: 0, bothUp: 0 } },
   { name: "scratching-head", label: "Scratching head", how: "Scratch your head with one hand, then the other.", aimMode: "forearm", arm: ["clap"], expect: { clap: 0, bothUp: 0 } },
   { name: "talking-hands", label: "Talking with hands", how: "Talk and gesture naturally for 10 s.", aimMode: "forearm", arm: ["clap"], expect: { clap: 0, bothUp: 0 } },
@@ -73,17 +73,19 @@ export function replayClip(clip: Clip, timeOffset = 0): ReplayResult {
   const G = useGame.getState();
   G.resetArming();
   clip.arm.forEach((g) => G.arm(g, true));
-  const unreg = Object.entries(clip.targets).map(([id, rect]) => registerTarget(id, () => rect));
   const events: MotionEvent[] = [];
   const off = subscribe("*", (e) => events.push(e));
   const thetas: number[] = [];
   const t0 = clip.frames[0]?.t ?? 0;
-  clip.frames.forEach((f, i) => {
-    engine.process(unpack(f.lm), timeOffset + f.t - t0, clip.video.w, clip.video.h, clip.screen.w, clip.screen.h);
-    if (i >= clip.frames.length / 2 && f.lm) thetas.push(engine.latest.theta);
-  });
+  // Only the clip's targets during the replay; the page's own targets come back untouched afterwards.
+  withTargets(clip.targets, () =>
+    clip.frames.forEach((f, i) => {
+      engine.process(unpack(f.lm), timeOffset + f.t - t0, clip.video.w, clip.video.h, clip.screen.w, clip.screen.h);
+      if (i >= clip.frames.length / 2 && f.lm) thetas.push(engine.latest.theta);
+    }),
+  );
   off();
-  unreg.forEach((u) => u());
+  engine.reset(); // the live camera re-syncs the engine on its next frame
   G.resetArming();
   const counts: Record<string, number> = {};
   const hoverMs: Record<string, number> = {};

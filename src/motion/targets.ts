@@ -33,6 +33,22 @@ export function allTargetRects(): Record<string, Rect> {
   return out;
 }
 
+/**
+ * Runs `fn` with ONLY these targets registered, then puts the page's own targets back exactly as they were.
+ * Used by clip replays, so a replay never removes the live A–D targets of the page it runs on.
+ */
+export function withTargets<T>(rects: Record<string, Rect>, fn: () => T): T {
+  const saved = new Map(targets);
+  targets.clear();
+  for (const [id, r] of Object.entries(rects)) targets.set(id, { rect: () => r, enabled: () => true });
+  try {
+    return fn();
+  } finally {
+    targets.clear();
+    for (const [id, e] of saved) targets.set(id, e);
+  }
+}
+
 /** The enabled target under a viewport point, or null. Later registrations win on overlap. */
 export function hitTest(x: number, y: number): string | null {
   let hit: string | null = null;

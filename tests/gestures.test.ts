@@ -1,7 +1,7 @@
 // tests/gestures.test.ts: gesture engine on synthetic landmark frames (PASS/FAIL harness, run with `npx tsx`).
 // P1-19 adds recorded-landmark clips from tests/fixtures/*.json on top of these.
 import { engine } from "../src/motion/gestures";
-import { registerTarget } from "../src/motion/targets";
+import { hitTest, registerTarget } from "../src/motion/targets";
 import { subscribe, useGame } from "../src/game/store";
 import { keyToEvent } from "../src/motion/keyboard";
 import type { RawLandmark } from "../src/motion/pose";
@@ -222,6 +222,12 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
   ok("clip replay: synthetic 2 claps → 2 clap events", checkClip(synth, r).length === 0, JSON.stringify(r.counts));
   const r2 = replayClip({ ...synth, arm: [] }, 6e7);
   ok("clip replay: clap disarmed → 0 claps", (r2.counts.clap ?? 0) === 0);
+
+  // A replay must not remove the page's own targets (bug: live picking on /play/dev died after the first recording).
+  const offLive = registerTarget("dev:A", () => ({ x: 0, y: 0, w: 100, h: 100 }));
+  replayClip({ ...synth, targets: { "dev:A": { x: 500, y: 500, w: 10, h: 10 } } }, 7e7);
+  ok("replay keeps the page's live targets", hitTest(50, 50) === "dev:A" && hitTest(505, 505) === null);
+  offLive();
 
   // 2) Every recorded clip in tests/fixtures/ (record them on /play/dev → "Record a test clip").
   const dir = "tests/fixtures";
