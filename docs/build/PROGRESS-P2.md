@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 03:20 · **Now working on:** P2-15 · **Branch:** main
+**Last updated:** Sat 03:20 · **Now working on:** P2-16 · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -24,7 +24,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-12 | Coach `/api/next` | 🟦 | ae7ad55 | Code done: coach.ts + route; 22 scripted-coach checks + HTTP on Mongo (fallback ~130 ms). Still to do: try the Director prompt on a real model (needs key) |
 | P2-13 | Real `nextStep` in `api.ts` | ✅ | f157cd0 | All api.ts calls have a live path (NEXT_PUBLIC_MOCK=0); nextStep 6 s abort → browser fallback; postAttempt queue + 5 s retry. 19 live checks |
 | P2-14 | Review page | ✅ | 6bc7a64 | /review/[wsId]: cards, plain-words flags, AI-named mistakes, edit → code recompute (PATCH), remove (PATCH remove:true). Scan + Use last scan now go here. Checked in Chrome |
-| P2-15 | Class stats `GET /api/class/[code]` | ⬜ | | |
+| P2-15 | Class stats `GET /api/class/[code]` | ✅ | ed3f5d9 | ClassStats via $facet (Mongo) / JS (memory), first attempt per student per question; coachFeed from decision rows. 15 checks per store + identical output |
 | P2-16 | Live phone page `/live/[code]` | ⬜ | | |
 | P2-17 | Teacher insight | ⬜ | | |
 | P2-18 | Results page | ⬜ | | |
