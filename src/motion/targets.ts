@@ -6,20 +6,29 @@ import { emit } from "@/game/store";
 export type Rect = { x: number; y: number; w: number; h: number };
 type RectFn = () => Rect | null;
 
-const targets = new Map<string, RectFn>();
+type Entry = { rect: RectFn; enabled: () => boolean };
+const targets = new Map<string, Entry>();
 
-export function registerTarget(id: string, rect: RectFn): () => void {
-  targets.set(id, rect);
+/** Registers a target. A disabled target keeps its rect (3D objects still follow it) but is never hit. */
+export function registerTarget(id: string, rect: RectFn, enabled: () => boolean = () => true): () => void {
+  const entry = { rect, enabled };
+  targets.set(id, entry);
   return () => {
-    if (targets.get(id) === rect) targets.delete(id);
+    if (targets.get(id) === entry) targets.delete(id);
   };
 }
 
-/** The target under a viewport point, or null. Later registrations win on overlap. */
+/** Current viewport rect of a registered target (used to place 3D objects behind DOM targets). */
+export function getTargetRect(id: string): Rect | null {
+  return targets.get(id)?.rect() ?? null;
+}
+
+/** The enabled target under a viewport point, or null. Later registrations win on overlap. */
 export function hitTest(x: number, y: number): string | null {
   let hit: string | null = null;
-  for (const [id, fn] of targets) {
-    const r = fn();
+  for (const [id, t] of targets) {
+    if (!t.enabled()) continue;
+    const r = t.rect();
     if (r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) hit = id;
   }
   return hit;
@@ -33,16 +42,25 @@ export const HOVER_MIN_MS = 150;
  */
 export function useTarget(id: string, el: RefObject<HTMLElement | null>, enabled = true) {
   const enterT = useRef<number | null>(null);
-
+  const enabledRef = useRef(enabled);
   useEffect(() => {
-    if (!enabled) return;
-    return registerTarget(id, () => {
-      const node = el.current;
-      if (!node) return null;
-      const r = node.getBoundingClientRect();
-      return { x: r.left, y: r.top, w: r.width, h: r.height };
-    });
-  }, [id, enabled, el]);
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(
+    () =>
+      registerTarget(
+        id,
+        () => {
+          const node = el.current;
+          if (!node) return null;
+          const r = node.getBoundingClientRect();
+          return { x: r.left, y: r.top, w: r.width, h: r.height };
+        },
+        () => enabledRef.current,
+      ),
+    [id, el],
+  );
 
   const endHover = useCallback(() => {
     const start = enterT.current;

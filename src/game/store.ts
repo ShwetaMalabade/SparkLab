@@ -1,6 +1,8 @@
 // src/game/store.ts: Zustand store. Motion slice (P1-03): cursors, the event bus, gesture arming.
 import { create } from "zustand";
-import type { CommandEvent, Cursor, GestureEvent, GestureType, MotionEvent, MotionEventType } from "@/motion/types";
+import type { NextStep } from "@/lib/client/api";
+import type { TQuestion } from "@/lib/schema";
+import type { CommandEvent, Cursor, GestureEvent, GestureType, InputSource, MotionEvent, MotionEventType } from "@/motion/types";
 
 const hiddenCursor: Cursor = { x: 0, y: 0, visible: false, targetId: null, dwell: 0 };
 
@@ -31,7 +33,57 @@ export type MotionSlice = {
   toggleDebug: () => void;
 };
 
-export const useGame = create<MotionSlice>()((set, get) => ({
+// ---------- Game slice (P1-09, docs/plan/05 §1) ----------
+export type Phase = "intro" | "play" | "lockin" | "reveal" | "next" | "end";
+
+export type GameSession = { sessionId: string; classCode: string; worksheetId: string; timeBudgetSec: number; nickname: string };
+
+/** What the template reports at LOCK-IN; GameRunner adds the session fields to build the AttemptInput. */
+export type LockResult = {
+  chosen: "A" | "B" | "C" | "D" | "X";
+  chosenText: string;
+  correct: boolean;
+  misconceptionId: string | null;
+  input: InputSource;
+  hoverTrace: { choice: "A" | "B" | "C" | "D"; ms: number }[];
+  experiments?: { thetaDeg: number; speed: number; landedM: number }[];
+  mixTries?: [string, string][];
+  balancerSteps?: number[][];
+};
+
+export type GameSlice = {
+  session: GameSession | null;
+  question: TQuestion | null;
+  phase: Phase;
+  /** Pause = tracking lost or P (freeze timers, dim the scene). Not a phase, so play resumes where it was. */
+  paused: boolean;
+  pauseReason: "lost" | "manual" | null;
+  score: number;
+  streak: number;
+  correctCount: number;
+  answeredCount: number;
+  played: string[];
+  lastNext: NextStep | null;
+  /** Every NextStep this session, for the AI trace drawer (P1-17). */
+  trace: NextStep[];
+  lastResult: (LockResult & { points: number }) | null;
+  caption: string;
+  coachLine: string | null;
+  setGame: (p: Partial<GameSlice>) => void;
+  resetGame: () => void;
+};
+
+const GAME_INITIAL = {
+  session: null, question: null, phase: "intro" as Phase, paused: false, pauseReason: null,
+  score: 0, streak: 0, correctCount: 0, answeredCount: 0, played: [], lastNext: null, trace: [],
+  lastResult: null, caption: "", coachLine: null,
+} satisfies Omit<GameSlice, "setGame" | "resetGame">;
+
+export const useGame = create<MotionSlice & GameSlice>()((set, get) => ({
+  ...GAME_INITIAL,
+  setGame: (p) => set(p),
+  resetGame: () => set({ ...GAME_INITIAL }),
+
   cam: "off",
   poseDelegate: null,
   setCam: (cam, poseDelegate) => set((s) => ({ cam, poseDelegate: poseDelegate === undefined ? s.poseDelegate : poseDelegate })),
