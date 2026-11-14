@@ -1,97 +1,147 @@
 "use client";
-// src/game/lab/MoleculeBuilder.tsx: "What is the formula of water?" — atoms float around you; close your palm (✊)
-// on one to grab it, carry it into the glowing build ring and open your hand to drop it. Code checks every atom
-// (src/game/molecules.ts): a wrong element flashes red and says why; too many says so; the right set snaps into
-// the real molecule shape. Twins: point-hold / fist / click the atom buttons, keys 1–4, Backspace = undo, Enter = next.
+// src/game/lab/MoleculeBuilder.tsx: build a molecule by bonding pieces, like real chemistry.
+// Atoms float around you, each labelled. ✊ close a hand on a piece to hold it; bring two pieces together (one in
+// each hand, a "clap", or carry one into another) and they BOND: H + H → H₂, then H₂ + O → H₂O. Open your hand to
+// put a piece down: it stays there, so you can work on several pieces. A bond that can't be part of the answer
+// (carbon in water, a 3rd hydrogen) flashes red, pushes apart and says why. Rules: src/game/molecules.ts (tested).
+// Twins: mouse drag a piece onto another · keys 1–4 / atom buttons add to the piece on the bench · Backspace undo.
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { create } from "zustand";
-import { CanvasTexture, Color, Group, Mesh, MeshStandardMaterial, SRGBColorSpace, Vector3 } from "three";
+import { CanvasTexture, Group, Mesh, MeshStandardMaterial, SRGBColorSpace, Vector3 } from "three";
 import { useTarget } from "@/motion/targets";
 import type { Side } from "@/motion/types";
 import { Confetti } from "@/three/effects/Confetti";
 import { CPK } from "../ChemText";
-import { addAtom, ELEMENT_NAME, moleculeLayout, targetCounts, type Counts, type MoleculeQuestion } from "../molecules";
+import { ELEMENT_NAME, mergePieces, moleculeLayout, pieceFormula, subscript, targetCounts, type Counts, type MoleculeQuestion } from "../molecules";
 import { playSfx } from "../sfx";
 import { subscribe, useGame } from "../store";
 
 // ---------------------------------------------------------------- state
 
 type Tone = "info" | "bad" | "good";
-type BState = { counts: Counts; built: string[]; message: string; tone: Tone; done: boolean; wrong: number; atomsVersion: number };
-export const useBuilder = create<BState>(() => ({ counts: {}, built: [], message: "", tone: "info", done: false, wrong: 0, atomsVersion: 0 }));
+type Holder = Side | "mouse";
+type Piece = { id: number; counts: Counts; pos: Vector3; held: Holder | null; flashUntil: number; phase: number; bench: boolean };
+type BState = { message: string; tone: Tone; done: boolean; wrong: number; version: number; best: Counts; doneId: number | null };
+export const useBuilder = create<BState>(() => ({ message: "", tone: "info", done: false, wrong: 0, version: 0, best: {}, doneId: null }));
 
-/** Floating atoms (mutable, read every frame). */
-type Atom = { id: number; el: string; home: Vector3; pos: Vector3; held: Side | null; flashUntil: number; phase: number };
-const ATOMS: Atom[] = [];
-/** Latest screen position of each floating atom + the build ring (for grabbing by cursor). */
+const PIECES: Piece[] = [];
+let nextId = 0;
 const SCREEN = new Map<number, { x: number; y: number }>();
-const ZONE = { x: 0, y: 0, r: 130 };
-const ZONE_POS = new Vector3(0, 0.55, 0.9);
+const MOUSE = { x: 0, y: 0, down: false };
+const BENCH = new Vector3(0, 0.75, 0.9);
+const BOND_DIST = 0.62; // world units between piece centres to bond
+const cooldown = new Map<string, number>();
 
-function spawnAtoms(palette: string[]) {
-  ATOMS.length = 0;
+const bump = () => useBuilder.setState((s) => ({ version: s.version + 1 }));
+const size = (c: Counts) => Object.values(c).reduce((a, b) => a + b, 0);
+
+function spawn(q: MoleculeQuestion) {
+  PIECES.length = 0;
   SCREEN.clear();
-  let id = 0;
-  // 3 of each element, spread on a wide arc around the student.
-  const all = palette.flatMap((el) => [el, el, el]);
+  cooldown.clear();
+  const all = q.palette.flatMap((el) => [el, el, el]);
   all.forEach((el, i) => {
     const a = -Math.PI * 0.95 + (i / (all.length - 1)) * Math.PI * 0.9;
-    const home = new Vector3(Math.cos(a) * 3.2, 1.2 + (i % 3) * 0.55, 0.3 + Math.sin(a) * 0.9 + 0.9);
-    ATOMS.push({ id: id++, el, home, pos: home.clone(), held: null, flashUntil: 0, phase: i * 0.7 });
+    PIECES.push({ id: nextId++, counts: { [el]: 1 }, pos: new Vector3(Math.cos(a) * 3.1, 1.25 + (i % 3) * 0.5, 1.2 + Math.sin(a) * 0.6), held: null, flashUntil: 0, phase: i * 0.7, bench: false });
   });
-  useBuilder.setState((s) => ({ atomsVersion: s.atomsVersion + 1 }));
+  bump();
 }
 
-function tryAdd(q: MoleculeQuestion, el: string) {
-  const st = useBuilder.getState();
-  if (st.done) return false;
-  const r = addAtom(q, st.counts, el);
+function updateBest(q: MoleculeQuestion) {
+  const target = targetCounts(q.formula);
+  const best = PIECES.filter((p) => Object.keys(p.counts).every((k) => target[k])).sort((a, b) => size(b.counts) - size(a.counts))[0];
+  useBuilder.setState({ best: best ? { ...best.counts } : {} });
+}
+
+/** Bond piece b INTO piece a. Returns true if it bonded. */
+function bond(q: MoleculeQuestion, a: Piece, b: Piece) {
+  const key = `${Math.min(a.id, b.id)}-${Math.max(a.id, b.id)}`;
+  const now = performance.now();
+  if ((cooldown.get(key) ?? 0) > now) return false;
+  cooldown.set(key, now + 900);
+  const r = mergePieces(q, a.counts, b.counts);
   if (!r.ok) {
-    useBuilder.setState({ message: r.message, tone: "bad", wrong: st.wrong + 1 });
+    a.flashUntil = b.flashUntil = now + 1100;
+    const away = b.pos.clone().sub(a.pos).setY(0);
+    if (away.lengthSq() < 1e-4) away.set(1, 0, 0);
+    if (!b.held) b.pos.add(away.normalize().multiplyScalar(0.9)); // push apart so they stop touching
+    useBuilder.setState((s) => ({ message: r.message, tone: "bad", wrong: s.wrong + 1 }));
     playSfx("wrong", 0.5);
     return false;
   }
-  useBuilder.setState({ counts: r.counts, built: [...st.built, el], message: r.message, tone: r.done ? "good" : "info", done: r.done });
-  playSfx(r.done ? "correct" : "pop", r.done ? 0.7 : 0.4);
+  a.counts = r.counts;
+  a.pos.lerp(b.pos, 0.5);
+  a.bench = a.bench || b.bench;
+  if (b.held && !a.held) a.held = b.held;
+  PIECES.splice(PIECES.indexOf(b), 1);
+  SCREEN.delete(b.id);
+  useBuilder.setState({ message: r.message, tone: r.done ? "good" : "info", done: r.done, doneId: r.done ? a.id : null });
+  playSfx(r.done ? "correct" : "pop", r.done ? 0.7 : 0.45);
+  if (r.done) PIECES.forEach((p) => (p.held = null));
+  updateBest(q);
+  bump();
   return true;
 }
 
-function undo(q: MoleculeQuestion) {
-  const st = useBuilder.getState();
-  if (st.done || !st.built.length) return;
-  const el = st.built[st.built.length - 1];
-  const counts = { ...st.counts, [el]: (st.counts[el] ?? 1) - 1 };
-  useBuilder.setState({ counts, built: st.built.slice(0, -1), message: `Took one ${ELEMENT_NAME[el] ?? el} back out.`, tone: "info" });
-  void q;
+/** Keyboard / buttons: add one atom to the piece on the bench (made if missing). */
+function addToBench(q: MoleculeQuestion, el: string) {
+  if (useBuilder.getState().done) return;
+  const atom: Piece = { id: nextId++, counts: { [el]: 1 }, pos: BENCH.clone().add(new Vector3(0, 0.8, 0)), held: null, flashUntil: 0, phase: 0, bench: false };
+  const bench = PIECES.find((p) => p.bench);
+  if (!bench) {
+    atom.bench = true;
+    atom.pos.copy(BENCH);
+    PIECES.push(atom);
+    useBuilder.setState({ message: `${subscript(el)} is on the bench. Add more atoms to bond them.`, tone: "info" });
+    playSfx("pop", 0.4);
+    updateBest(q);
+    return bump();
+  }
+  PIECES.push(atom);
+  if (!bond(q, bench, atom)) {
+    PIECES.splice(PIECES.indexOf(atom), 1);
+    bump();
+  }
+}
+
+function undoBench(q: MoleculeQuestion) {
+  const bench = PIECES.find((p) => p.bench);
+  if (!bench || useBuilder.getState().done) return;
+  const els = Object.keys(bench.counts).filter((k) => bench.counts[k] > 0);
+  const el = els[els.length - 1];
+  bench.counts = { ...bench.counts, [el]: bench.counts[el] - 1 };
+  if (!size(bench.counts)) PIECES.splice(PIECES.indexOf(bench), 1);
+  useBuilder.setState({ message: `Took one ${ELEMENT_NAME[el] ?? el} off the bench.`, tone: "info" });
+  updateBest(q);
+  bump();
 }
 
 // ---------------------------------------------------------------- DOM overlay
 
 export function BuilderOverlay({ q, onNext, index, total }: { q: MoleculeQuestion; onNext: () => void; index: number; total: number }) {
-  const { counts, message, tone, done } = useBuilder();
+  const { message, tone, done, best } = useBuilder();
   const target = useMemo(() => targetCounts(q.formula), [q.formula]);
 
   useEffect(() => {
-    useBuilder.setState({ counts: {}, built: [], message: "Close your hand on an atom to grab it, then drop it in the glowing ring.", tone: "info", done: false, wrong: 0 });
-    spawnAtoms(q.palette);
+    useBuilder.setState({ message: "✊ Grab an atom with each hand and bring them together to bond them.", tone: "info", done: false, wrong: 0, best: {}, doneId: null });
+    spawn(q);
   }, [q]);
 
-  // Atom buttons (point-hold / fist / click / keys), undo, next.
   useEffect(() => {
     const offs = [
       subscribe("dwell", (e) => {
         const id = e.targetId ?? "";
-        if (id.startsWith("mol:add:")) tryAdd(q, id.slice(8));
-        if (id === "mol:undo") undo(q);
+        if (id.startsWith("mol:add:")) addToBench(q, id.slice(8));
+        if (id === "mol:undo") undoBench(q);
         if (id === "mol:next" && useBuilder.getState().done) onNext();
       }),
       subscribe("command", (e) => {
-        if (e.cmd === "pick" && e.value !== undefined && q.palette[e.value]) tryAdd(q, q.palette[e.value]);
+        if (e.cmd === "pick" && e.value !== undefined && q.palette[e.value]) addToBench(q, q.palette[e.value]);
       }),
       subscribe("bothUp", () => useBuilder.getState().done && onNext()),
     ];
-    const key = (e: KeyboardEvent) => e.key === "Backspace" && undo(q);
+    const key = (e: KeyboardEvent) => e.key === "Backspace" && undoBench(q);
     window.addEventListener("keydown", key);
     return () => {
       offs.forEach((o) => o());
@@ -104,13 +154,13 @@ export function BuilderOverlay({ q, onNext, index, total }: { q: MoleculeQuestio
     <>
       <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex flex-col items-center gap-3 px-6">
         <div className="rounded-2xl border border-magenta/40 bg-navy/90 px-6 py-3 text-center">
-          <div className="text-sm text-muted">Molecule {index + 1} of {total} · build it with your hands</div>
+          <div className="text-sm text-muted">Molecule {index + 1} of {total} · bond the atoms with your hands</div>
           <div className="font-display text-3xl">{q.prompt}</div>
         </div>
-        {/* Live atom count, computed by code */}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted">biggest piece:</span>
           {Object.keys(target).map((el) => {
-            const have = counts[el] ?? 0;
+            const have = best[el] ?? 0;
             const full = have === target[el];
             return (
               <span key={el} className={`rounded-full border px-4 py-1 font-display text-2xl tabular-nums ${full ? "border-lime/70 text-lime" : "border-line text-text"} bg-navy/85`}>
@@ -119,11 +169,13 @@ export function BuilderOverlay({ q, onNext, index, total }: { q: MoleculeQuestio
             );
           })}
         </div>
-        <div className={`max-w-[900px] rounded-full border bg-navy/90 px-5 py-2 text-center text-xl ${toneCls}`}>{tone === "bad" ? "✗ " : tone === "good" ? "✓ " : ""}{message}</div>
+        <div className={`max-w-[900px] rounded-full border bg-navy/90 px-5 py-2 text-center text-xl ${toneCls}`}>
+          {tone === "bad" ? "✗ " : tone === "good" ? "✓ " : ""}
+          {message}
+        </div>
         {done && <div className="max-w-[800px] rounded-xl bg-navy/85 px-4 py-2 text-center text-lg text-muted">{q.fact}</div>}
       </div>
 
-      {/* Atom buttons (left column) + undo / next (right column): the centre stays clear for the drop ring */}
       <div className="pointer-events-none absolute left-4 top-[22vh] z-30 grid grid-cols-2 gap-3">
         {q.palette.map((el, i) => (
           <AtomButton key={el} el={el} n={i + 1} disabled={done} />
@@ -132,6 +184,9 @@ export function BuilderOverlay({ q, onNext, index, total }: { q: MoleculeQuestio
       <div className="pointer-events-none absolute right-4 top-[30vh] z-30 flex flex-col gap-3">
         <Btn id="mol:undo" label="↶ Undo" sub="Backspace" disabled={done} />
         {done && <Btn id="mol:next" label="Next ▶" sub="Enter / both hands up" accent />}
+      </div>
+      <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-navy/80 px-4 py-1 text-sm text-muted">
+        ✊ hold a piece · bring two together to bond · ✋ open to put it down · mouse: drag one onto another · keys 1–4 add to the bench
       </div>
     </>
   );
@@ -163,114 +218,161 @@ function Btn({ id, label, sub, disabled, accent }: { id: string; label: string; 
   );
 }
 
-// ---------------------------------------------------------------- 3D scene
+// ---------------------------------------------------------------- 3D
 
 const ndc = new Vector3();
-function cursorToWorld(x: number, y: number, w: number, h: number, camera: { position: Vector3 } & Parameters<Vector3["unproject"]>[0], z: number, out: Vector3) {
+function toWorld(x: number, y: number, w: number, h: number, camera: never, z: number, out: Vector3) {
   ndc.set((x / w) * 2 - 1, -(y / h) * 2 + 1, 0.5).unproject(camera);
-  const dir = ndc.sub(camera.position).normalize();
-  return out.copy(camera.position).addScaledVector(dir, (z - camera.position.z) / dir.z);
+  const cam = (camera as unknown as { position: Vector3 }).position;
+  const dir = ndc.sub(cam).normalize();
+  return out.copy(cam).addScaledVector(dir, (z - cam.z) / dir.z);
 }
 
 const labelCache = new Map<string, CanvasTexture>();
-function labelTex(el: string) {
-  const hit = labelCache.get(el);
+function labelTex(text: string) {
+  const hit = labelCache.get(text);
   if (hit) return hit;
   const c = document.createElement("canvas");
-  c.width = c.height = 128;
+  c.width = 256;
+  c.height = 128;
   const g = c.getContext("2d")!;
-  g.font = "bold 72px system-ui, sans-serif";
+  g.font = "bold 80px system-ui, sans-serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.lineWidth = 8;
+  g.lineWidth = 12;
   g.strokeStyle = "#0B1020";
-  g.strokeText(el, 64, 68);
+  g.strokeText(text, 128, 66);
   g.fillStyle = "#FFFFFF";
-  g.fillText(el, 64, 68);
+  g.fillText(text, 128, 66);
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
-  labelCache.set(el, t);
+  labelCache.set(text, t);
   return t;
 }
 
-export function BuilderScene({ q }: { q: MoleculeQuestion }) {
-  const { camera, size } = useThree();
-  const groups = useRef<(Group | null)[]>([]);
-  const tmp = useMemo(() => new Vector3(), []);
-  const done = useBuilder((s) => s.done);
-  const built = useBuilder((s) => s.built);
-  const version = useBuilder((s) => s.atomsVersion); // re-render when atoms are re-spawned
+/** Where each atom of a (partial) piece sits around its centre; the finished molecule uses its real shape. */
+function clusterLayout(counts: Counts, q: MoleculeQuestion, done: boolean): { el: string; at: [number, number, number] }[] {
+  if (done) return moleculeLayout(q.formula).map((a) => ({ el: a.el, at: [a.at[0] * 0.9, a.at[1] * 0.9, a.at[2] * 0.9] as [number, number, number] }));
+  const atoms = Object.keys(counts).flatMap((k) => Array.from({ length: counts[k] }, () => k));
+  atoms.sort((a, b) => (a === "H" ? 1 : 0) - (b === "H" ? 1 : 0)); // heavy atoms in the middle, H around
+  const n = atoms.length;
+  if (n === 1) return [{ el: atoms[0], at: [0, 0, 0] }];
+  if (n === 2) return [{ el: atoms[0], at: [-0.21, 0, 0] }, { el: atoms[1], at: [0.21, 0, 0] }];
+  return atoms.map((el, i) => ({ el, at: i === 0 ? [0, 0, 0] : [Math.cos((i / (n - 1)) * Math.PI * 2) * 0.36, Math.sin((i / (n - 1)) * Math.PI * 2) * 0.36, 0.05] }));
+}
 
-  // Grab with a fist on a floating atom; open the hand to drop it.
+export function BuilderScene({ q }: { q: MoleculeQuestion }) {
+  const { camera, size: view, gl } = useThree();
+  const groups = useRef(new Map<number, Group>());
+  const tmp = useMemo(() => new Vector3(), []);
+  const version = useBuilder((s) => s.version);
+  const done = useBuilder((s) => s.done);
+  const doneId = useBuilder((s) => s.doneId);
+
+  // Hands: ✊ grabs the nearest piece; ✋ puts it down where it is. Mouse: drag a piece onto another.
   useEffect(() => {
+    const grab = (holder: Holder, x: number, y: number, radius: number) => {
+      if (useBuilder.getState().done) return;
+      let best: Piece | null = null, bd = radius;
+      for (const p of PIECES) {
+        const s = SCREEN.get(p.id);
+        if (!s || p.held) continue;
+        const d = Math.hypot(s.x - x, s.y - y);
+        if (d < bd) {
+          bd = d;
+          best = p;
+        }
+      }
+      if (best) {
+        best.held = holder;
+        best.bench = false;
+        playSfx("pop", 0.25);
+      }
+    };
+    const release = (holder: Holder) => PIECES.forEach((p) => p.held === holder && (p.held = null));
     const offs = [
       subscribe("grab", (e) => {
-        if (!e.side || useBuilder.getState().done) return;
+        if (!e.side) return;
         const c = useGame.getState().cursors[e.side];
-        if (!c.visible) return;
-        let best: Atom | null = null, bestD = 95;
-        for (const a of ATOMS) {
-          const p = SCREEN.get(a.id);
-          if (!p || a.held) continue;
-          const dd = Math.hypot(p.x - c.x, p.y - c.y);
-          if (dd < bestD) {
-            bestD = dd;
-            best = a;
-          }
-        }
-        if (best) {
-          best.held = e.side;
-          playSfx("pop", 0.25);
-        }
+        if (c.visible) grab(e.side, c.x, c.y, 115);
       }),
-      subscribe("release", (e) => {
-        const a = ATOMS.find((x) => x.held === e.side);
-        if (!a) return;
-        a.held = null;
-        const p = SCREEN.get(a.id);
-        if (p && Math.hypot(p.x - ZONE.x, p.y - ZONE.y) < ZONE.r) {
-          if (tryAdd(q, a.el)) a.pos.copy(a.home).add(new Vector3(0, 3, 0)); // used: re-spawn from above
-          else a.flashUntil = performance.now() + 1200; // wrong: flash red and float back
-        }
-      }),
+      subscribe("release", (e) => e.side && release(e.side)),
     ];
-    return () => offs.forEach((o) => o());
-  }, [q]);
+    const el = gl.domElement;
+    const rel = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      MOUSE.x = e.clientX - r.left;
+      MOUSE.y = e.clientY - r.top;
+    };
+    const down = (e: PointerEvent) => {
+      rel(e);
+      MOUSE.down = true;
+      grab("mouse", MOUSE.x, MOUSE.y, 80);
+    };
+    const up = () => {
+      MOUSE.down = false;
+      release("mouse");
+    };
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", rel);
+    window.addEventListener("pointerup", up);
+    return () => {
+      offs.forEach((o) => o());
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", rel);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [gl]);
 
   useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const t = clock.elapsedTime;
-    // Build ring on screen (for the drop test).
-    tmp.copy(ZONE_POS).project(camera);
-    ZONE.x = ((tmp.x + 1) / 2) * size.width;
-    ZONE.y = ((1 - tmp.y) / 2) * size.height;
     const cursors = useGame.getState().cursors;
-    ATOMS.forEach((a, i) => {
-      const g = groups.current[i];
-      if (a.held) {
-        const c = cursors[a.held];
-        if (c.visible) cursorToWorld(c.x, c.y, size.width, size.height, camera as never, 1.2, tmp);
-        a.pos.lerp(tmp, Math.min(1, dt * 14));
-      } else {
-        tmp.copy(a.home).add(new Vector3(Math.sin(t * 0.6 + a.phase) * 0.12, Math.sin(t * 0.9 + a.phase) * 0.12, 0));
-        a.pos.lerp(tmp, Math.min(1, dt * 2.5));
-      }
+    const { done: doneNow, doneId: did } = useBuilder.getState();
+    for (const p of PIECES) {
+      if (doneNow && p.id === did) p.pos.lerp(tmp.copy(BENCH).setY(1.1), Math.min(1, dt * 3));
+      else if (p.held) {
+        let x = MOUSE.x, y = MOUSE.y, ok = MOUSE.down;
+        if (p.held !== "mouse") {
+          const c = cursors[p.held];
+          x = c.x;
+          y = c.y;
+          ok = c.visible;
+        }
+        if (ok) p.pos.lerp(toWorld(x, y, view.width, view.height, camera as never, 1.2, new Vector3()), Math.min(1, dt * 14));
+      } else if (!p.bench) p.pos.y += Math.sin(t * 0.9 + p.phase) * 0.0015; // gentle float where you left it
+      const g = groups.current.get(p.id);
       if (g) {
-        g.position.copy(a.pos);
-        const flash = performance.now() < a.flashUntil;
-        const m = (g.children[0] as Mesh).material as MeshStandardMaterial;
-        m.emissive.set(flash ? "#FF2D55" : a.held ? "#FFFFFF" : CPK[a.el] ?? "#9CA3AF");
-        m.emissiveIntensity = flash ? 0.9 + Math.sin(t * 30) * 0.3 : a.held ? 0.45 : 0.15;
-        g.scale.setScalar(a.held ? 1.25 : 1);
+        g.position.copy(p.pos);
+        const flash = performance.now() < p.flashUntil;
+        g.traverse((o) => {
+          if (o instanceof Mesh && o.userData.atom) {
+            const m = o.material as MeshStandardMaterial;
+            m.emissive.set(flash ? "#FF2D55" : p.held ? "#FFFFFF" : o.userData.color);
+            m.emissiveIntensity = flash ? 0.9 + Math.sin(t * 30) * 0.3 : p.held ? 0.4 : 0.15;
+          }
+        });
+        g.scale.setScalar(p.held ? 1.15 : 1);
+        if (doneNow && p.id === did) g.rotation.y += dt * 0.9;
       }
-      tmp.copy(a.pos).project(camera);
-      SCREEN.set(a.id, { x: ((tmp.x + 1) / 2) * size.width, y: ((1 - tmp.y) / 2) * size.height });
-    });
+      tmp.copy(p.pos).project(camera);
+      SCREEN.set(p.id, { x: ((tmp.x + 1) / 2) * view.width, y: ((1 - tmp.y) / 2) * view.height });
+    }
+    // Bond: a held piece touching any other piece (both hands together = a "clap" bond).
+    if (!doneNow) {
+      for (const a of [...PIECES]) {
+        if (!a.held || !PIECES.includes(a)) continue;
+        for (const b of [...PIECES]) {
+          if (a === b || !PIECES.includes(b)) continue;
+          if (a.pos.distanceTo(b.pos) < BOND_DIST && bond(q, a, b)) break;
+        }
+      }
+    }
   });
 
+  const shown = done ? PIECES.filter((p) => p.id === doneId) : PIECES;
   return (
     <group>
-      {/* Bench */}
       <mesh position={[0, -0.05, 0.6]} receiveShadow>
         <boxGeometry args={[9, 0.1, 2.4]} />
         <meshStandardMaterial color="#E5E7EB" roughness={0.35} />
@@ -279,90 +381,56 @@ export function BuilderScene({ q }: { q: MoleculeQuestion }) {
         <boxGeometry args={[8.8, 0.85, 2.2]} />
         <meshStandardMaterial color="#E9DCC6" roughness={0.8} />
       </mesh>
-      <BuildRing done={done} />
-      {/* Floating atoms */}
-      {ATOMS.map((a, i) => (
-        <group key={`${version}-${a.id}`} ref={(el) => void (groups.current[i] = el)}>
-          <mesh>
-            <sphereGeometry args={[a.el === "H" ? 0.22 : 0.3, 28, 22]} />
-            <meshStandardMaterial color={CPK[a.el] ?? "#9CA3AF"} roughness={0.3} metalness={0.05} emissive={CPK[a.el] ?? "#9CA3AF"} emissiveIntensity={0.15} />
-          </mesh>
-          <sprite position={[0, 0, 0.36]} scale={[0.36, 0.36, 1]}>
-            <spriteMaterial map={labelTex(a.el)} depthTest={false} transparent />
-          </sprite>
-        </group>
+      <mesh position={[BENCH.x, 0.02, BENCH.z]} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[0.55, 0.7, 48]} />
+        <meshStandardMaterial color={done ? "#A3E635" : "#E879F9"} emissive={done ? "#A3E635" : "#E879F9"} emissiveIntensity={0.7} transparent opacity={0.8} />
+      </mesh>
+      {shown.map((p) => (
+        <PieceView key={`${p.id}-${version}`} p={p} q={q} done={done && p.id === doneId} register={(g) => (g ? groups.current.set(p.id, g) : groups.current.delete(p.id))} />
       ))}
-      <Built q={q} built={built} done={done} />
-      {done && <Confetti key={`c-${q.id}`} position={[ZONE_POS.x, ZONE_POS.y + 0.6, ZONE_POS.z]} />}
+      {done && <Confetti key={`c-${q.id}`} position={[BENCH.x, BENCH.y + 0.8, BENCH.z]} />}
     </group>
   );
 }
 
-function BuildRing({ done }: { done: boolean }) {
-  const ring = useRef<Mesh>(null);
-  useFrame(({ clock }) => {
-    if (!ring.current) return;
-    const s = 1 + Math.sin(clock.elapsedTime * 3) * 0.05;
-    ring.current.scale.set(s, s, 1);
-    (ring.current.material as MeshStandardMaterial).color = new Color(done ? "#A3E635" : "#E879F9");
-  });
-  return (
-    <mesh ref={ring} position={[ZONE_POS.x, 0.02, ZONE_POS.z]} rotation-x={-Math.PI / 2}>
-      <ringGeometry args={[0.6, 0.78, 48]} />
-      <meshStandardMaterial color="#E879F9" emissive="#E879F9" emissiveIntensity={0.8} transparent opacity={0.9} />
-    </mesh>
-  );
-}
-
-/** The atoms already dropped in: a loose cluster while building; the real molecule shape when done. */
-function Built({ q, built, done }: { q: MoleculeQuestion; built: string[]; done: boolean }) {
-  const spin = useRef<Group>(null);
-  const layout = useMemo(() => moleculeLayout(q.formula), [q.formula]);
-  useFrame((_, dt) => {
-    if (spin.current) spin.current.rotation.y += Math.min(dt, 0.05) * (done ? 0.9 : 0.3);
-  });
-  // While building: place each dropped atom at the matching layout slot (so it "grows" into the molecule).
-  const slots = useMemo(() => {
-    const used = new Set<number>();
-    return built.map((el) => {
-      const i = layout.findIndex((s, k) => s.el === el && !used.has(k));
-      used.add(i);
-      return { el, at: layout[Math.max(0, i)].at };
+function PieceView({ p, q, done, register }: { p: Piece; q: MoleculeQuestion; done: boolean; register: (g: Group | null) => void }) {
+  const atoms = useMemo(() => clusterLayout(p.counts, q, done), [p.counts, q, done]);
+  const label = subscript(pieceFormula(p.counts, q.formula));
+  const bonds = useMemo(() => {
+    if (atoms.length < 2) return [];
+    return atoms.slice(1).map((a, j) => {
+      const i = j + 1;
+      const me = new Vector3(...a.at);
+      let best = new Vector3(...atoms[0].at), bd = Infinity;
+      atoms.forEach((o, n) => {
+        if (n === i || o.el === "H" || (a.el !== "H" && n > i)) return;
+        const d = new Vector3(...o.at).distanceTo(me);
+        if (d < bd) {
+          bd = d;
+          best = new Vector3(...o.at);
+        }
+      });
+      const dir = me.clone().sub(best);
+      return { mid: best.clone().add(me).multiplyScalar(0.5), len: dir.length(), q: new Group().quaternion.setFromUnitVectors(new Vector3(0, 1, 0), dir.normalize()) };
     });
-  }, [built, layout]);
-  const k = 0.9;
+  }, [atoms]);
   return (
-    <group ref={spin} position={[ZONE_POS.x, ZONE_POS.y + 0.25, ZONE_POS.z]}>
-      {done &&
-        slots.slice(1).map((s, j) => {
-          // Bond each atom to its nearest heavy (non-H) atom: works for H2O, CH4 and chains like C2H6 / CH3OH.
-          const i = j + 1;
-          const me = new Vector3(...s.at).multiplyScalar(k);
-          let best = new Vector3(...slots[0].at).multiplyScalar(k), bd = Infinity;
-          slots.forEach((o, n) => {
-            if (n === i || o.el === "H" || (s.el !== "H" && n > i)) return;
-            const p = new Vector3(...o.at).multiplyScalar(k);
-            const d = p.distanceTo(me);
-            if (d < bd) {
-              bd = d;
-              best = p;
-            }
-          });
-          const dir = me.clone().sub(best);
-          const q4 = new Group().quaternion.setFromUnitVectors(new Vector3(0, 1, 0), dir.clone().normalize());
-          return (
-            <mesh key={`b${j}`} position={best.clone().add(me).multiplyScalar(0.5)} quaternion={q4}>
-              <cylinderGeometry args={[0.05, 0.05, dir.length(), 10]} />
-              <meshStandardMaterial color="#CBD5E1" />
-            </mesh>
-          );
-        })}
-      {slots.map((s, i) => (
-        <mesh key={i} position={new Vector3(...s.at).multiplyScalar(done ? k : k * 1.25)}>
-          <sphereGeometry args={[s.el === "H" ? 0.2 : 0.28, 28, 22]} />
-          <meshStandardMaterial color={CPK[s.el] ?? "#9CA3AF"} roughness={0.3} emissive={CPK[s.el] ?? "#9CA3AF"} emissiveIntensity={done ? 0.35 : 0.15} />
+    <group ref={register} position={p.pos.toArray()}>
+      {bonds.map((b, i) => (
+        <mesh key={`b${i}`} position={b.mid} quaternion={b.q}>
+          <cylinderGeometry args={[0.045, 0.045, b.len, 10]} />
+          <meshStandardMaterial color="#CBD5E1" />
         </mesh>
       ))}
+      {atoms.map((a, i) => (
+        <mesh key={i} position={a.at} userData={{ atom: true, color: CPK[a.el] ?? "#9CA3AF" }}>
+          <sphereGeometry args={[a.el === "H" ? 0.19 : 0.27, 26, 20]} />
+          <meshStandardMaterial color={CPK[a.el] ?? "#9CA3AF"} roughness={0.3} emissive={CPK[a.el] ?? "#9CA3AF"} emissiveIntensity={0.15} />
+        </mesh>
+      ))}
+      <sprite position={[0, atoms.length > 1 ? 0.62 : 0.48, 0.1]} scale={[0.7, 0.35, 1]}>
+        <spriteMaterial map={labelTex(label)} depthTest={false} transparent />
+      </sprite>
     </group>
   );
 }

@@ -107,3 +107,35 @@ export function moleculeLayout(formula: string): { el: string; at: [number, numb
   const spots = known[rest.length] ?? rest.map((_, i) => [Math.cos((i / rest.length) * Math.PI * 2) * 0.6, Math.sin((i / rest.length) * Math.PI * 2) * 0.6, 0] as [number, number, number]);
   return [{ el: centre, at: [0, 0, 0] }, ...rest.map((el, i) => ({ el, at: spots[i] }))];
 }
+
+// ---------------------------------------------------------------- combining pieces (H + H → H₂, H₂ + O → H₂O)
+
+/** A piece's formula, elements in the order the target writes them (H2O → "H2O", "HO", "H2"); others after, A–Z. */
+export function pieceFormula(counts: Counts, targetFormula: string): string {
+  const order = Object.keys(targetCounts(targetFormula));
+  const els = Object.keys(counts).filter((k) => counts[k] > 0);
+  els.sort((a, b) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)) || a.localeCompare(b));
+  return els.map((k) => `${k}${counts[k] > 1 ? counts[k] : ""}`).join("");
+}
+
+const SUB = "₀₁₂₃₄₅₆₇₈₉";
+/** "H2O" → "H₂O" for labels. */
+export const subscript = (f: string) => f.replace(/(?<=[A-Za-z)])(\d+)/g, (d) => [...d].map((c) => SUB[+c]).join(""));
+
+export type MergeResult =
+  | { ok: true; counts: Counts; done: boolean; message: string }
+  | { ok: false; reason: "wrong_element" | "too_many"; message: string };
+
+/** Bond two pieces together. Allowed only if the result could still become the target molecule. */
+export function mergePieces(q: MoleculeQuestion, a: Counts, b: Counts): MergeResult {
+  const target = targetCounts(q.formula);
+  const counts: Counts = { ...a };
+  for (const [k, v] of Object.entries(b)) counts[k] = (counts[k] ?? 0) + v;
+  const fa = subscript(pieceFormula(a, q.formula)), fb = subscript(pieceFormula(b, q.formula)), fc = subscript(pieceFormula(counts, q.formula));
+  for (const k of Object.keys(counts)) {
+    if (!target[k]) return { ok: false, reason: "wrong_element", message: `${cap(nm(k))} isn't in ${q.name}. ${cap(q.name)} is made of ${list(Object.keys(target).map(nm))} only.` };
+    if (counts[k] > target[k]) return { ok: false, reason: "too_many", message: `${fa} + ${fb} would have ${plural(counts[k], k)}, but ${q.name} has only ${target[k]}.` };
+  }
+  const done = isDone(target, counts);
+  return { ok: true, counts, done, message: done ? `${fa} + ${fb} → ${fc}: ${builtLine(q, target)}` : `${fa} + ${fb} → ${fc}. ${progressLine(q, target, counts)}` };
+}

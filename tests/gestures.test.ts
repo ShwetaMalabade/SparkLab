@@ -8,7 +8,7 @@ import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { classifyHand } from "../src/motion/hands";
-import { addAtom, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, moleculeLayout, targetCounts } from "../src/game/molecules";
+import { addAtom, mergePieces, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, moleculeLayout, pieceFormula, subscript, targetCounts } from "../src/game/molecules";
 import { POURS } from "../src/game/lab/lessons";
 import { isBalanced } from "../src/lib/chem";
 import { reportFps, useQuality, particles } from "../src/three/quality";
@@ -317,6 +317,22 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
     moleculeLayout(q.formula).forEach((a) => (lay[a.el] = (lay[a.el] ?? 0) + 1));
     ok(`build ${q.formula}: layout has exactly its atoms`, JSON.stringify(Object.entries(lay).sort()) === JSON.stringify(Object.entries(t).sort()), JSON.stringify(lay));
   }
+}
+
+// ---- Combining pieces: H + H → H₂, H₂ + O → H₂O ----
+{
+  const water = MOLECULE_QUESTIONS.find((q) => q.formula === "H2O")!;
+  const hh = mergePieces(water, { H: 1 }, { H: 1 });
+  ok("bond: H + H → H₂", hh.ok && !hh.done && /H \+ H → H₂/.test(hh.message), hh.message);
+  const ho = mergePieces(water, { H: 1 }, { O: 1 });
+  ok("bond: H + O → HO (still needs 1 H)", ho.ok && /→ HO/.test(ho.message) && /1 more hydrogen/.test(ho.message), ho.message);
+  const h2o = mergePieces(water, { H: 2 }, { O: 1 });
+  ok("bond: H₂ + O → H₂O done", h2o.ok && h2o.done && /H₂ \+ O → H₂O/.test(h2o.message), h2o.message);
+  const hc = mergePieces(water, { H: 2 }, { C: 1 });
+  ok("bond: H₂ + C rejected (carbon not in water)", !hc.ok && hc.reason === "wrong_element");
+  const h3 = mergePieces(water, { H: 2 }, { H: 1 });
+  ok("bond: H₂ + H rejected (water has only 2 H)", !h3.ok && h3.reason === "too_many", h3.message);
+  ok("labels: order follows the target (CH3OH, H2O)", pieceFormula({ O: 1, H: 2 }, "H2O") === "H2O" && pieceFormula({ H: 3, C: 1 }, "CH3OH") === "CH3" && subscript("C2H6") === "C₂H₆");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
