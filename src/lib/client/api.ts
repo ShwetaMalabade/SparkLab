@@ -75,11 +75,14 @@ export async function createClass(o?: { timeBudgetSec?: number; worksheetId?: st
 export async function ingest(file: Blob, classCode: string, onStep: (s: IngestStep) => void): Promise<TWorksheet> {
   void file;
   void classCode;
+  // Same step ids as the real pipeline (src/lib/ingest.ts), so the Scan page renders both identically.
   const steps: [string, number][] = [
-    ["Reading the page", 900],
-    ["Checking every answer with code", 500],
-    ["Modeling likely mistakes", 800],
-    ["Building the 3D levels", 500],
+    ["photo", 300],
+    ["reader", 1200],
+    ["check", 400],
+    ["designer", 900],
+    ["verify", 400],
+    ["save", 300],
   ];
   for (const [step, delay] of steps) {
     onStep({ step, status: "running" });
