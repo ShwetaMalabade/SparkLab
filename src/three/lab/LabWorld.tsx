@@ -1,38 +1,38 @@
 "use client";
 // src/three/lab/LabWorld.tsx: the chemistry building you walk through between questions.
 // A floor plan of 4 rooms around a cross-shaped hallway, seen from above at an angle (dollhouse cut-away: only the
-// outer back walls are full height). WASD / arrows walk; the coach's next question lights up one room; walking into
-// it (or Enter) calls onArrive, and the game zooms into that room's bench.
-import { ContactShadows } from "@react-three/drei";
+// outer back walls are full height). Furniture = the Meshy models in public/models/lab; glassware, liquids and
+// molecules stay in code (they change colour live). WASD / arrows walk; the coach's next question lights up one
+// room; walking into it (or Enter) calls onArrive, and the game zooms into that room's bench.
+import { Environment, Lightformer } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { MathUtils, Vector3, type Group, type Mesh, type MeshStandardMaterial } from "three";
-import {
-  Bench, BigScale, Bookshelf, CH4, CO2, Desk, FumeHood, Glassware, LabWindow, MoleculeModel, PeriodicPoster, Plant, Poster,
-  ReagentShelf, Sink, Stool, TitrationStand, WATER, Whiteboard,
-} from "./LabProps";
-import { signTexture } from "./textures";
+import { CH4, CO2, Glass, LabWindow, MoleculeModel, PeriodicPoster, Poster, WATER, Whiteboard } from "./LabProps";
+import { Model, preloadLabModels } from "./Model";
+import { plankTexture, signTexture, tileTexture } from "./textures";
 
 export type RoomId = "mix" | "titration" | "balance" | "study";
 type Rect = { x0: number; x1: number; z0: number; z1: number };
-export type Room = Rect & { id: RoomId; name: string; sub: string; accent: string; floor: string; doorX: number; doorZ: number };
+export type Room = Rect & { id: RoomId; name: string; sub: string; accent: string; tile: [string, string]; doorX: number; doorZ: number };
 
-const H = 2.6; // full wall height
-const LOW = 0.5; // cut-away wall height
-const T = 0.15; // wall thickness
+const H = 2.8; // full wall height
+const LOW = 0.45; // cut-away wall height
+const T = 0.18; // wall thickness
 const DOOR = 2.0;
 
 export const ROOMS: Room[] = [
-  { id: "mix", name: "Mixing Lab", sub: "precipitates & gases", accent: "#E879F9", floor: "#E7E1F0", x0: -10, x1: -1.2, z0: -8, z1: -1.2, doorX: -5.6, doorZ: -1.2 },
-  { id: "titration", name: "Titration Lab", sub: "acids & bases", accent: "#F472B6", floor: "#F3E3EA", x0: 1.2, x1: 10, z0: -8, z1: -1.2, doorX: 5.6, doorZ: -1.2 },
-  { id: "balance", name: "Balance Lab", sub: "balancing equations", accent: "#22D3EE", floor: "#DDEDF2", x0: -10, x1: -1.2, z0: 1.2, z1: 8, doorX: -5.6, doorZ: 1.2 },
-  { id: "study", name: "Study Room", sub: "number problems", accent: "#A3E635", floor: "#EEF2E3", x0: 1.2, x1: 10, z0: 1.2, z1: 8, doorX: 5.6, doorZ: 1.2 },
+  { id: "mix", name: "Mixing Lab", sub: "precipitates · flames · gases", accent: "#E879F9", tile: ["#E4DAF0", "#B9A8D3"], x0: -10, x1: -1.2, z0: -8, z1: -1.2, doorX: -5.6, doorZ: -1.2 },
+  { id: "titration", name: "Titration Lab", sub: "acids & bases", accent: "#F472B6", tile: ["#F3DCE6", "#D9A9BF"], x0: 1.2, x1: 10, z0: -8, z1: -1.2, doorX: 5.6, doorZ: -1.2 },
+  { id: "balance", name: "Balance Lab", sub: "balancing equations", accent: "#22D3EE", tile: ["#D6EBF1", "#9FC8D6"], x0: -10, x1: -1.2, z0: 1.2, z1: 8, doorX: -5.6, doorZ: 1.2 },
+  { id: "study", name: "Study Room", sub: "number problems", accent: "#A3E635", tile: ["#E8EDD3", "#BFC99A"], x0: 1.2, x1: 10, z0: 1.2, z1: 8, doorX: 5.6, doorZ: 1.2 },
 ];
 export const roomOf = (id: RoomId) => ROOMS.find((r) => r.id === id)!;
 const inside = (r: Rect, x: number, z: number) => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1;
 
-/** Wall boxes (for drawing + collisions). Doors are gaps on the hallway side. */
+if (typeof window !== "undefined") preloadLabModels();
+
+/** Wall boxes (drawing + collisions). Doors are gaps on the hallway side. */
 function buildWalls() {
   const walls: { r: Rect; h: number }[] = [];
   const hx = (z: number, x0: number, x1: number, h: number, gapX?: number) => {
@@ -42,14 +42,12 @@ function buildWalls() {
   };
   const vz = (x: number, z0: number, z1: number, h: number) => walls.push({ r: { x0: x - T / 2, x1: x + T / 2, z0, z1 }, h });
   for (const r of ROOMS) {
-    const north = r.z0 < 0; // rooms above the hallway
-    // Back (north) and left (west) outer walls are full height; everything else is a low cut-away wall.
+    const north = r.z0 < 0;
     hx(r.z0, r.x0, r.x1, r.z0 === -8 ? H : LOW, north ? undefined : r.doorX);
     hx(r.z1, r.x0, r.x1, LOW, north ? r.doorX : undefined);
     vz(r.x0, r.z0, r.z1, r.x0 === -10 ? H : LOW);
     vz(r.x1, r.z0, r.z1, LOW);
   }
-  // Hallway ends.
   hx(-8, -1.2, 1.2, H);
   hx(8, -1.2, 1.2, LOW);
   vz(-10, -1.2, 1.2, H);
@@ -58,52 +56,65 @@ function buildWalls() {
 }
 const WALLS = buildWalls();
 
-/** Furniture footprints the player can't walk through (world coordinates). */
+/** Furniture footprints (world coordinates) the student can't walk through. */
+const box = (x: number, z: number, w: number, d: number): Rect => ({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
 const SOLIDS: Rect[] = [
-  // Mixing Lab
-  { x0: -8.6, x1: -3.6, z0: -5.0, z1: -4.0 }, { x0: -9.9, x1: -9.3, z0: -6.8, z1: -2.2 }, { x0: -8.4, x1: -4.4, z0: -7.9, z1: -7.3 },
+  // Mixing Lab: 2 islands, back-wall row, sink
+  box(-7.6, -4.6, 2.05, 2.05), box(-3.6, -4.6, 2.05, 2.05), { x0: -10, x1: -1.2, z0: -8, z1: -6.95 },
   // Titration Lab
-  { x0: 2.8, x1: 7.8, z0: -5.0, z1: -4.0 }, { x0: 2.4, x1: 8.6, z0: -7.9, z1: -7.3 },
+  box(3.6, -4.6, 2.05, 2.05), box(7.6, -4.6, 2.05, 2.05), { x0: 1.2, x1: 10, z0: -8, z1: -6.95 },
   // Balance Lab
-  { x0: -6.3, x1: -4.9, z0: 3.9, z1: 5.1 }, { x0: -9.9, x1: -9.3, z0: 2.4, z1: 6.6 },
-  // Study Room
-  { x0: 2.6, x1: 4.0, z0: 3.2, z1: 4.5 }, { x0: 5.6, x1: 7.0, z0: 3.2, z1: 4.5 }, { x0: 2.6, x1: 4.0, z0: 5.6, z1: 6.9 }, { x0: 5.6, x1: 7.0, z0: 5.6, z1: 6.9 },
+  box(-5.6, 4.9, 2.05, 2.05), box(-9.6, 4.6, 0.6, 1.5), box(-8.4, 2.9, 0.5, 0.5), box(-8.4, 6.7, 0.5, 0.5), box(-2.7, 6.7, 0.5, 0.5),
+  // Study Room desks + shelf
+  box(3.4, 4.0, 1.3, 1.0), box(6.4, 4.0, 1.3, 1.0), box(3.4, 6.4, 1.3, 1.0), box(6.4, 6.4, 1.3, 1.0), box(9.6, 4.6, 0.6, 1.5),
 ];
-
-const R = 0.28; // player radius
+const R = 0.3;
 function blocked(x: number, z: number) {
-  if (x < -9.85 || x > 9.85 || z < -7.85 || z > 7.85) return true;
+  if (x < -9.8 || x > 9.8 || z < -7.8 || z > 7.8) return true;
   const hit = (r: Rect) => x + R > r.x0 && x - R < r.x1 && z + R > r.z0 && z - R < r.z1;
   return WALLS.some((w) => hit(w.r)) || SOLIDS.some(hit);
 }
 
-// ---------------------------------------------------------------- the canvas
+// ---------------------------------------------------------------- canvas
 
 export type LabWorldProps = {
-  /** The room the coach picked for the next question (lit up). */
   target: RoomId | null;
   done: RoomId[];
   locked?: RoomId[];
   onArrive: (room: RoomId) => void;
-  coachLine?: string;
 };
 
-/** Where the player stands; kept between visits so you come back out where you went in. */
+/** Where the student stands; kept between visits. */
 const PLAYER = { x: 0, z: 0, heading: Math.PI };
 
 export function LabWorld(props: LabWorldProps) {
   return (
-    <div className="absolute inset-0">
-      <Canvas dpr={[1, 1.5]} camera={{ position: [9, 12, 11], fov: 38, near: 0.1, far: 80 }} gl={{ antialias: true }}>
-        <color attach="background" args={["#141B33"]} />
-        <hemisphereLight args={["#FFF7E6", "#3B2F4A", 0.75]} />
-        <directionalLight position={[6, 14, 8]} intensity={1.3} color="#FFF4DD" />
-        <ambientLight intensity={0.25} />
-        <Building {...props} />
-        <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={24} blur={2.2} far={3} resolution={512} />
-        <EffectComposer multisampling={0}>
-          <Bloom intensity={0.45} luminanceThreshold={0.6} mipmapBlur />
-        </EffectComposer>
+    <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 40%, #3A3160 0%, #1A1530 75%)" }}>
+      <Canvas shadows="soft" dpr={[1, 1.75]} camera={{ position: [8, 10, 10], fov: 34, near: 0.1, far: 80 }} gl={{ antialias: true, alpha: true }}>
+        <hemisphereLight args={["#FFF4E0", "#5B4B7A", 0.45]} />
+        <directionalLight
+          castShadow
+          position={[7, 14, 6]}
+          intensity={2.6}
+          color="#FFF1DA"
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-left={-14}
+          shadow-camera-right={14}
+          shadow-camera-top={12}
+          shadow-camera-bottom={-12}
+          shadow-camera-near={1}
+          shadow-camera-far={40}
+          shadow-bias={-0.0004}
+          shadow-normalBias={0.03}
+        />
+        <Environment resolution={256} frames={1}>
+          <Lightformer form="rect" intensity={1.6} position={[0, 8, 6]} scale={[18, 6, 1]} color="#FFF1DA" />
+          <Lightformer form="rect" intensity={0.8} position={[-10, 4, 0]} rotation-y={Math.PI / 2} scale={[12, 4, 1]} color="#C4B5FD" />
+          <Lightformer form="rect" intensity={0.8} position={[10, 4, 0]} rotation-y={-Math.PI / 2} scale={[12, 4, 1]} color="#FBCFE8" />
+        </Environment>
+        <Suspense fallback={null}>
+          <Building {...props} />
+        </Suspense>
       </Canvas>
     </div>
   );
@@ -116,6 +127,7 @@ function Building({ target, done, locked = [], onArrive }: LabWorldProps) {
       {WALLS.map((w, i) => (
         <WallBox key={i} r={w.r} h={w.h} />
       ))}
+      <Doors />
       <MixRoom />
       <TitrationRoom />
       <BalanceRoom />
@@ -131,68 +143,114 @@ function Building({ target, done, locked = [], onArrive }: LabWorldProps) {
 }
 
 function Floors() {
+  const planks = useMemo(() => {
+    const t = plankTexture().clone();
+    t.needsUpdate = true;
+    t.repeat.set(6, 5);
+    return t;
+  }, []);
   return (
     <group>
-      {/* Hallway: warm wood planks */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]}>
+      <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[20, 16]} />
-        <meshStandardMaterial color="#C08A5B" roughness={0.8} />
+        <meshStandardMaterial map={planks} roughness={0.75} />
       </mesh>
-      {Array.from({ length: 40 }, (_, i) => (
-        <mesh key={i} rotation-x={-Math.PI / 2} position={[-10 + i * 0.5, 0.003, 0]}>
-          <planeGeometry args={[0.012, 16]} />
-          <meshBasicMaterial color="#9C6B45" />
-        </mesh>
-      ))}
-      {/* Room floors: pale lab tiles with a grid */}
       {ROOMS.map((r) => (
-        <group key={r.id}>
-          <mesh rotation-x={-Math.PI / 2} position={[(r.x0 + r.x1) / 2, 0.004, (r.z0 + r.z1) / 2]}>
-            <planeGeometry args={[r.x1 - r.x0, r.z1 - r.z0]} />
-            <meshStandardMaterial color={r.floor} roughness={0.55} />
-          </mesh>
-          <gridHelper args={[Math.max(r.x1 - r.x0, r.z1 - r.z0), Math.round(Math.max(r.x1 - r.x0, r.z1 - r.z0) / 0.6), "#C9C3D6", "#C9C3D6"]}
-            position={[(r.x0 + r.x1) / 2, 0.006, (r.z0 + r.z1) / 2]} scale={[(r.x1 - r.x0) / Math.max(r.x1 - r.x0, r.z1 - r.z0), 1, (r.z1 - r.z0) / Math.max(r.x1 - r.x0, r.z1 - r.z0)]} />
-        </group>
+        <RoomFloor key={r.id} r={r} />
       ))}
-      {/* Base slab edge */}
-      <mesh position={[0, -0.17, 0]}>
-        <boxGeometry args={[20.3, 0.3, 16.3]} />
-        <meshStandardMaterial color="#2A2440" />
+      {/* Base slab, so the building floats like a diorama */}
+      <mesh position={[0, -0.26, 0]} receiveShadow>
+        <boxGeometry args={[20.4, 0.5, 16.4]} />
+        <meshStandardMaterial color="#4A3F66" roughness={0.9} />
       </mesh>
     </group>
   );
 }
 
+function RoomFloor({ r }: { r: Room }) {
+  const map = useMemo(() => {
+    const t = tileTexture(r.tile[0], r.tile[1]).clone();
+    t.needsUpdate = true;
+    t.repeat.set((r.x1 - r.x0) / 2.4, (r.z1 - r.z0) / 2.4);
+    return t;
+  }, [r]);
+  return (
+    <mesh rotation-x={-Math.PI / 2} position={[(r.x0 + r.x1) / 2, 0.005, (r.z0 + r.z1) / 2]} receiveShadow>
+      <planeGeometry args={[r.x1 - r.x0, r.z1 - r.z0]} />
+      <meshStandardMaterial map={map} roughness={0.5} />
+    </mesh>
+  );
+}
+
 function WallBox({ r, h }: { r: Rect; h: number }) {
   const full = h > 1;
+  const w = r.x1 - r.x0, d = r.z1 - r.z0;
   return (
-    <mesh position={[(r.x0 + r.x1) / 2, h / 2, (r.z0 + r.z1) / 2]}>
-      <boxGeometry args={[r.x1 - r.x0, h, r.z1 - r.z0]} />
-      <meshStandardMaterial color={full ? "#E8E2D6" : "#D9CFBF"} roughness={0.9} />
-    </mesh>
+    <group position={[(r.x0 + r.x1) / 2, 0, (r.z0 + r.z1) / 2]}>
+      <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial color={full ? "#F3EBDD" : "#E7DCC9"} roughness={0.95} />
+      </mesh>
+      {/* wooden cap on low walls, skirting on full walls */}
+      <mesh position={[0, full ? 0.07 : h + 0.02, 0]}>
+        <boxGeometry args={[w + 0.02, full ? 0.14 : 0.05, d + 0.02]} />
+        <meshStandardMaterial color="#B07A4C" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+/** An open classroom door beside each doorway (swung into the room). */
+function Doors() {
+  return (
+    <>
+      {ROOMS.map((r) => {
+        const north = r.z0 < 0;
+        return <Model key={r.id} name="ClassroomDoor" position={[r.doorX - DOOR / 2 + 0.1, 0, r.doorZ + (north ? -0.55 : 0.55)]} rotation={Math.PI / 2} />;
+      })}
+    </>
   );
 }
 
 // ---------------------------------------------------------------- rooms
 
+/** A few code-drawn beakers/flasks on a table top (their colours can change live). */
+function TableGlass({ at, colors, y = 0.93 }: { at: [number, number]; colors: string[]; y?: number }) {
+  return (
+    <>
+      {colors.map((c, i) => (
+        <Glass key={i} kind={i % 3 === 1 ? "flask" : "beaker"} color={c} position={[at[0] - 0.5 + i * 0.35, y, at[1] + (i % 2 ? 0.25 : -0.2)]} />
+      ))}
+    </>
+  );
+}
+
 function MixRoom() {
   return (
     <group>
-      {/* Island bench with glassware, stools in front */}
-      <Bench position={[-6.1, 0, -4.5]} length={5} depth={1} />
-      <Glassware position={[-6.1, 0, -4.5]} width={4.4} seed={5} />
-      {[-7.8, -6.6, -5.4, -4.2].map((x) => (
-        <Stool key={x} position={[x, 0, -3.4]} />
+      {/* Back wall row */}
+      <Model name="FumeHoodCabinet" position={[-8.9, 0, -7.45]} />
+      <Model name="ChemicalBottleShelf" position={[-7.5, 0, -7.65]} />
+      <Model name="ChemicalBottleShelf" position={[-6.45, 0, -7.65]} />
+      <Model name="LabSinkCounter" position={[-5.0, 0, -7.55]} />
+      <Model name="FumeHoodCabinet" position={[-3.4, 0, -7.45]} />
+      <Model name="WallClock" position={[-5.0, 2.05, -7.88]} />
+      <PeriodicPoster position={[-2.0, 1.8, -7.88]} w={1.1} />
+      <LabWindow position={[-9.88, 1.65, -4.6]} rotation={Math.PI / 2} />
+      {/* Islands */}
+      <Model name="SquareIslandLabTable" position={[-7.6, 0, -4.6]} />
+      <Model name="SquareIslandLabTable" position={[-3.6, 0, -4.6]} />
+      <Model name="BunsenBurner" position={[-7.9, 0.92, -4.9]} />
+      <Model name="TestTubeRack" position={[-7.2, 0.92, -4.1]} />
+      <Model name="DropperBottlesSet" position={[-3.1, 0.92, -4.2]} />
+      <Model name="SchoolMicroscope" position={[-4.1, 0.92, -5.1]} />
+      <TableGlass at={[-3.6, -4.5]} colors={["#FFD21F", "#60A5FA", "#F8FAFC"]} />
+      <TableGlass at={[-7.5, -5.2]} colors={["#7EB8D8", "#F472B6"]} />
+      {/* Stools */}
+      {[-8.2, -7.0, -4.2, -3.0].map((x) => (
+        <Model key={x} name="RoundLabStool" position={[x, 0, -3.15]} />
       ))}
-      {/* Back wall: reagent shelves + fume hood + periodic table */}
-      <ReagentShelf position={[-7.4, 0, -7.6]} width={2.2} seed={2} />
-      <FumeHood position={[-4.9, 0, -7.45]} />
-      <PeriodicPoster position={[-2.8, 1.75, -7.9]} w={1.5} />
-      {/* Left wall: window + sink */}
-      <LabWindow position={[-9.9, 1.6, -5.6]} rotation={Math.PI / 2} />
-      <Sink position={[-9.55, 0, -3.3]} rotation={Math.PI / 2} />
-      <Plant position={[-9.4, 0, -7.4]} size={1.2} />
+      <Model name="PottedMonsteraPlant" position={[-9.3, 0, -1.9]} />
     </group>
   );
 }
@@ -200,17 +258,25 @@ function MixRoom() {
 function TitrationRoom() {
   return (
     <group>
-      <Bench position={[5.3, 0, -4.5]} length={5} depth={1} />
-      <TitrationStand position={[4.0, 0, -4.5]} />
-      <TitrationStand position={[6.6, 0, -4.5]} />
-      <Glassware position={[5.3, 0, -4.4]} width={1.2} seed={11} />
-      {[3.5, 4.7, 5.9, 7.1].map((x) => (
-        <Stool key={x} position={[x, 0, -3.4]} />
+      <Model name="ChemicalBottleShelf" position={[1.9, 0, -7.65]} />
+      <Model name="FumeHoodCabinet" position={[3.5, 0, -7.45]} />
+      <Model name="LabSinkCounter" position={[5.3, 0, -7.55]} />
+      <Model name="ChemicalBottleShelf" position={[6.6, 0, -7.65]} />
+      <Model name="ScienceBookshelf" position={[8.4, 0, -7.6]} />
+      <Poster position={[5.3, 2.05, -7.88]} title="pH" lines={["acid  0–6", "neutral  7", "base  8–14"]} band="#DB2777" />
+      {[3.6, 7.6].map((x) => (
+        <group key={x}>
+          <Model name="SquareIslandLabTable" position={[x, 0, -4.6]} />
+          <Model name="RetortStand" position={[x - 0.3, 0.92, -4.75]} />
+          <Model name="MagneticStirrerHotPlate" position={[x - 0.15, 0.92, -4.6]} />
+          <Glass kind="flask" color="#F472B6" position={[x - 0.15, 1.04, -4.6]} />
+          <Model name="DropperBottlesSet" position={[x + 0.55, 0.92, -4.1]} />
+        </group>
       ))}
-      <ReagentShelf position={[3.6, 0, -7.6]} width={2.2} seed={8} />
-      <ReagentShelf position={[7.4, 0, -7.6]} width={2.2} seed={13} />
-      <Poster position={[5.5, 1.8, -7.9]} title="pH" lines={["acid  0–6", "neutral  7", "base  8–14"]} band="#DB2777" />
-      <Plant position={[9.4, 0, -7.4]} />
+      {[3.0, 4.2, 7.0, 8.2].map((x) => (
+        <Model key={x} name="RoundLabStool" position={[x, 0, -3.15]} />
+      ))}
+      <Model name="PottedMonsteraPlant" position={[9.3, 0, -1.9]} />
     </group>
   );
 }
@@ -218,13 +284,14 @@ function TitrationRoom() {
 function BalanceRoom() {
   return (
     <group>
-      <BigScale position={[-5.6, 0, 4.5]} />
-      <MoleculeModel position={[-8.2, 0, 3.0]} atoms={WATER} />
-      <MoleculeModel position={[-8.2, 0, 6.2]} atoms={CO2} />
-      <MoleculeModel position={[-3.0, 0, 6.6]} atoms={CH4} />
-      <Bench position={[-9.6, 0, 4.5]} rotation={Math.PI / 2} length={4} depth={0.6} />
-      <Glassware position={[-9.6, 0, 4.5]} rotation={Math.PI / 2} width={3.4} seed={21} />
-      <Plant position={[-2, 0, 7.4]} size={1.1} />
+      <Model name="SquareIslandLabTable" position={[-5.6, 0, 4.9]} />
+      <Model name="BrassBalanceScale" position={[-5.6, 0.92, 4.9]} height={0.85} />
+      <MoleculeModel position={[-8.4, 0, 2.9]} atoms={WATER} />
+      <MoleculeModel position={[-8.4, 0, 6.7]} atoms={CO2} />
+      <MoleculeModel position={[-2.7, 0, 6.7]} atoms={CH4} />
+      <Model name="ScienceBookshelf" position={[-9.6, 0, 4.6]} rotation={Math.PI / 2} />
+      <PeriodicPoster position={[-9.88, 1.9, 2.4]} rotation={Math.PI / 2} w={1.2} />
+      <Model name="PottedMonsteraPlant" position={[-2.0, 0, 2.0]} />
     </group>
   );
 }
@@ -232,12 +299,12 @@ function BalanceRoom() {
 function StudyRoom() {
   return (
     <group>
-      <Desk position={[3.3, 0, 3.7]} />
-      <Desk position={[6.3, 0, 3.7]} />
-      <Desk position={[3.3, 0, 6.1]} />
-      <Desk position={[6.3, 0, 6.1]} />
-      <Bookshelf position={[9.6, 0, 4.6]} rotation={-Math.PI / 2} />
-      <Plant position={[9.3, 0, 7.4]} size={1.3} />
+      {[[3.4, 4.0], [6.4, 4.0], [3.4, 6.4], [6.4, 6.4]].map(([x, z]) => (
+        <Model key={`${x}${z}`} name="StudentDeskAndChair" position={[x, 0, z]} rotation={-Math.PI / 2} />
+      ))}
+      <Model name="SchoolMicroscope" position={[3.1, 0.72, 3.9]} height={0.32} />
+      <Model name="ScienceBookshelf" position={[9.6, 0, 4.6]} rotation={-Math.PI / 2} />
+      <Model name="PottedMonsteraPlant" position={[9.2, 0, 7.3]} />
     </group>
   );
 }
@@ -245,15 +312,15 @@ function StudyRoom() {
 function Hallway() {
   return (
     <group>
-      <Whiteboard position={[0, 1.6, -7.9]} lines={["Today:", "Pb(NO₃)₂ + 2KI → PbI₂ + 2KNO₃", "CH₄ + 2O₂ → CO₂ + 2H₂O"]} />
-      <Plant position={[-9.4, 0, 0]} size={1.3} />
-      <Plant position={[0.7, 0, -7.4]} />
-      <Poster position={[-9.9, 1.7, 0]} rotation={Math.PI / 2} title="Safety" lines={["Goggles on", "No food", "Virtual only!"]} band="#F59E0B" />
+      <Whiteboard position={[0, 1.65, -7.88]} lines={["Today:", "Pb(NO₃)₂ + 2KI → PbI₂ + 2KNO₃", "CH₄ + 2O₂ → CO₂ + 2H₂O"]} />
+      <Model name="WallClock" position={[0, 2.45, -7.88]} height={0.4} />
+      <Poster position={[-9.88, 1.7, 0]} rotation={Math.PI / 2} title="Safety" lines={["Goggles on", "No food", "Virtual only!"]} band="#F59E0B" />
+      <Model name="PottedMonsteraPlant" position={[-0.6, 0, -7.3]} height={1.1} />
     </group>
   );
 }
 
-// ---------------------------------------------------------------- signs, guide, player
+// ---------------------------------------------------------------- signs, guide, student
 
 function DoorSign({ room, active, done, locked }: { room: Room; active: boolean; done: boolean; locked: boolean }) {
   const map = useMemo(
@@ -264,19 +331,17 @@ function DoorSign({ room, active, done, locked }: { room: Room; active: boolean;
   useFrame(({ clock }) => {
     if (!ref.current) return;
     const m = ref.current.material as MeshStandardMaterial;
-    m.emissiveIntensity = active ? 0.55 + Math.sin(clock.elapsedTime * 4) * 0.25 : 0.25;
-    ref.current.position.y = 2.15 + (active ? Math.sin(clock.elapsedTime * 2) * 0.06 : 0);
+    m.emissiveIntensity = active ? 0.6 + Math.sin(clock.elapsedTime * 4) * 0.25 : 0.3;
+    ref.current.position.y = 2.6 + (active ? Math.sin(clock.elapsedTime * 2) * 0.07 : 0);
   });
-  // Faces the camera direction (camera sits at +x +z).
   return (
-    <mesh ref={ref} position={[room.doorX, 2.15, room.doorZ]} rotation={[-0.35, Math.PI / 4, 0]}>
-      <planeGeometry args={[2.2, 0.55]} />
-      <meshStandardMaterial map={map} emissive="#ffffff" emissiveMap={map} emissiveIntensity={0.3} transparent opacity={locked ? 0.6 : 1} />
+    <mesh ref={ref} position={[room.doorX, 2.6, room.doorZ]} rotation={[-0.4, Math.PI / 4, 0]}>
+      <planeGeometry args={[2.3, 0.58]} />
+      <meshStandardMaterial map={map} emissive="#ffffff" emissiveMap={map} emissiveIntensity={0.3} transparent opacity={locked ? 0.65 : 1} />
     </mesh>
   );
 }
 
-/** Glowing ring in the target doorway + a light beam. */
 function Guide({ room }: { room: Room }) {
   const ring = useRef<Mesh>(null);
   useFrame(({ clock }) => {
@@ -287,14 +352,14 @@ function Guide({ room }: { room: Room }) {
   return (
     <group position={[room.doorX, 0, room.doorZ]}>
       <mesh ref={ring} rotation-x={-Math.PI / 2} position={[0, 0.03, 0]}>
-        <ringGeometry args={[0.55, 0.75, 40]} />
-        <meshBasicMaterial color={room.accent} toneMapped={false} transparent opacity={0.9} />
+        <ringGeometry args={[0.55, 0.78, 48]} />
+        <meshBasicMaterial color={room.accent} toneMapped={false} transparent opacity={0.95} />
       </mesh>
-      <mesh position={[0, 1.2, 0]}>
-        <cylinderGeometry args={[0.55, 0.55, 2.4, 32, 1, true]} />
-        <meshBasicMaterial color={room.accent} transparent opacity={0.12} side={2} depthWrite={false} />
+      <mesh position={[0, 1.3, 0]}>
+        <cylinderGeometry args={[0.6, 0.6, 2.6, 40, 1, true]} />
+        <meshBasicMaterial color={room.accent} transparent opacity={0.13} side={2} depthWrite={false} />
       </mesh>
-      <pointLight position={[0, 1.2, 0]} color={room.accent} intensity={4} distance={4} />
+      <pointLight position={[0, 1.4, 0]} color={room.accent} intensity={6} distance={5} />
     </group>
   );
 }
@@ -305,12 +370,13 @@ const KEYS: Record<string, [number, number]> = {
 
 function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: RoomId) => void }) {
   const body = useRef<Group>(null);
-  const legs = useRef<[Group | null, Group | null]>([null, null]);
+  const limbs = useRef<{ legs: (Group | null)[]; arms: (Group | null)[] }>({ legs: [], arms: [] });
+  const shadow = useRef<Mesh>(null);
   const held = useRef(new Set<string>());
   const arrived = useRef(false);
   const inTarget = useRef(0);
   const { camera } = useThree();
-  const look = useMemo(() => new Vector3(), []);
+  const tmp = useMemo(() => ({ pos: new Vector3(), look: new Vector3(PLAYER.x, 0.6, PLAYER.z) }), []);
   const live = useRef({ target, onArrive });
   useEffect(() => {
     live.current = { target, onArrive };
@@ -319,15 +385,13 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
   }, [target, onArrive]);
 
   useEffect(() => {
-    const isTyping = (e: KeyboardEvent) => (e.target as HTMLElement | null)?.tagName === "INPUT";
     const down = (e: KeyboardEvent) => {
-      if (isTyping(e)) return;
+      if ((e.target as HTMLElement | null)?.tagName === "INPUT") return;
       const k = e.key.toLowerCase();
       if (KEYS[k]) {
         held.current.add(k);
         e.preventDefault();
       }
-      // Enter: walk straight in (demo speed).
       if (k === "enter" && live.current.target && !arrived.current) {
         const r = roomOf(live.current.target);
         PLAYER.x = r.doorX;
@@ -358,30 +422,31 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
     const len = Math.hypot(dx, dz);
     const moving = len > 0;
     if (moving) {
-      const speed = 3.4 * dt;
-      const nx = PLAYER.x + (dx / len) * speed;
-      const nz = PLAYER.z + (dz / len) * speed;
+      const step = 3.2 * dt;
+      const nx = PLAYER.x + (dx / len) * step;
+      const nz = PLAYER.z + (dz / len) * step;
       if (!blocked(nx, PLAYER.z)) PLAYER.x = nx;
       if (!blocked(PLAYER.x, nz)) PLAYER.z = nz;
-      const want = Math.atan2(dx, dz);
-      let d = want - PLAYER.heading;
+      let d = Math.atan2(dx, dz) - PLAYER.heading;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       PLAYER.heading += d * Math.min(1, dt * 12);
     }
+    const t = clock.elapsedTime;
     const b = body.current;
     if (b) {
-      b.position.set(PLAYER.x, moving ? Math.abs(Math.sin(clock.elapsedTime * 10)) * 0.05 : 0, PLAYER.z);
+      b.position.set(PLAYER.x, moving ? Math.abs(Math.sin(t * 11)) * 0.06 : Math.sin(t * 2) * 0.01, PLAYER.z);
       b.rotation.y = PLAYER.heading;
-      const swing = moving ? Math.sin(clock.elapsedTime * 10) * 0.5 : 0;
-      if (legs.current[0]) legs.current[0].rotation.x = swing;
-      if (legs.current[1]) legs.current[1].rotation.x = -swing;
+      const swing = moving ? Math.sin(t * 11) * 0.6 : 0;
+      limbs.current.legs.forEach((l, i) => l && (l.rotation.x = i ? -swing : swing));
+      limbs.current.arms.forEach((a, i) => a && (a.rotation.x = i ? swing * 0.8 : -swing * 0.8));
     }
-    // Camera follows from above at an angle (stays inside the building's view).
-    const cx = MathUtils.clamp(PLAYER.x, -5, 5), cz = MathUtils.clamp(PLAYER.z, -4, 4);
-    camera.position.lerp(look.set(cx + 8, 11, cz + 10), Math.min(1, dt * 3));
-    camera.lookAt(cx * 0.9, 0, cz * 0.9);
+    if (shadow.current) shadow.current.position.set(PLAYER.x, 0.02, PLAYER.z);
+    // Camera: smooth follow from above at an angle, framed on the student.
+    const cx = MathUtils.clamp(PLAYER.x, -6, 6), cz = MathUtils.clamp(PLAYER.z, -5, 5);
+    camera.position.lerp(tmp.pos.set(cx + 8, 11, cz + 11), Math.min(1, dt * 2.5));
+    tmp.look.lerp(new Vector3(cx, 0.6, cz), Math.min(1, dt * 3));
+    camera.lookAt(tmp.look);
 
-    // Arrive: inside the target room for 0.3 s.
     const L = live.current;
     if (!L.target || arrived.current) return;
     if (inside(roomOf(L.target), PLAYER.x, PLAYER.z)) {
@@ -393,44 +458,71 @@ function Player({ target, onArrive }: { target: RoomId | null; onArrive: (room: 
     } else inTarget.current = 0;
   });
 
-  // A student in a lab coat (big friendly proportions so it reads from far away).
+  const skin = "#C98E64";
   return (
-    <group ref={body}>
-      {[-0.1, 0.1].map((x, i) => (
-        <group key={x} position={[x, 0.55, 0]} ref={(el) => void (legs.current[i] = el)}>
-          <mesh position={[0, -0.27, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, 0.55, 10]} />
-            <meshStandardMaterial color="#1E3A8A" />
-          </mesh>
-          <mesh position={[0, -0.55, 0.05]}>
-            <boxGeometry args={[0.13, 0.08, 0.22]} />
-            <meshStandardMaterial color="#111827" />
-          </mesh>
-        </group>
-      ))}
-      <mesh position={[0, 0.95, 0]}>
-        <cylinderGeometry args={[0.2, 0.28, 0.85, 16]} />
-        <meshStandardMaterial color="#F8FAFC" roughness={0.6} />
+    <>
+      {/* soft blob shadow that follows the student */}
+      <mesh ref={shadow} rotation-x={-Math.PI / 2}>
+        <circleGeometry args={[0.38, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.22} depthWrite={false} />
       </mesh>
-      {[-0.27, 0.27].map((x) => (
-        <mesh key={x} position={[x, 0.98, 0]} rotation-z={x > 0 ? 0.15 : -0.15}>
-          <cylinderGeometry args={[0.06, 0.06, 0.6, 10]} />
-          <meshStandardMaterial color="#F1F5F9" />
+      <group ref={body}>
+        {/* legs */}
+        {[-0.11, 0.11].map((x, i) => (
+          <group key={x} position={[x, 0.62, 0]} ref={(el) => void (limbs.current.legs[i] = el)}>
+            <mesh position={[0, -0.28, 0]} castShadow>
+              <capsuleGeometry args={[0.075, 0.38, 6, 12]} />
+              <meshStandardMaterial color="#2B4C8C" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, -0.56, 0.05]} castShadow>
+              <capsuleGeometry args={[0.07, 0.1, 6, 12]} />
+              <meshStandardMaterial color="#F8FAFC" roughness={0.6} />
+            </mesh>
+          </group>
+        ))}
+        {/* lab coat body */}
+        <mesh position={[0, 0.98, 0]} castShadow>
+          <capsuleGeometry args={[0.24, 0.42, 8, 20]} />
+          <meshStandardMaterial color="#FBFBFD" roughness={0.65} />
         </mesh>
-      ))}
-      <mesh position={[0, 1.55, 0]}>
-        <sphereGeometry args={[0.22, 20, 16]} />
-        <meshStandardMaterial color="#C68B59" roughness={0.6} />
-      </mesh>
-      <mesh position={[0, 1.65, -0.03]}>
-        <sphereGeometry args={[0.23, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#1F1A17" roughness={0.8} />
-      </mesh>
-      {/* safety goggles */}
-      <mesh position={[0, 1.58, 0.19]}>
-        <boxGeometry args={[0.3, 0.08, 0.06]} />
-        <meshStandardMaterial color="#38BDF8" transparent opacity={0.7} emissive="#38BDF8" emissiveIntensity={0.3} />
-      </mesh>
-    </group>
+        <mesh position={[0, 1.08, 0.2]}>
+          <boxGeometry args={[0.16, 0.3, 0.04]} />
+          <meshStandardMaterial color="#7C3AED" roughness={0.7} />
+        </mesh>
+        {/* arms */}
+        {[-0.3, 0.3].map((x, i) => (
+          <group key={x} position={[x, 1.18, 0]} ref={(el) => void (limbs.current.arms[i] = el)}>
+            <mesh position={[0, -0.22, 0]} castShadow>
+              <capsuleGeometry args={[0.065, 0.32, 6, 12]} />
+              <meshStandardMaterial color="#F1F5F9" roughness={0.65} />
+            </mesh>
+            <mesh position={[0, -0.45, 0]}>
+              <sphereGeometry args={[0.065, 12, 10]} />
+              <meshStandardMaterial color={skin} roughness={0.6} />
+            </mesh>
+          </group>
+        ))}
+        {/* head */}
+        <mesh position={[0, 1.6, 0]} castShadow>
+          <sphereGeometry args={[0.27, 28, 22]} />
+          <meshStandardMaterial color={skin} roughness={0.55} />
+        </mesh>
+        <mesh position={[0, 1.7, -0.04]} scale={[1.05, 0.85, 1.05]}>
+          <sphereGeometry args={[0.28, 28, 22, 0, Math.PI * 2, 0, Math.PI / 1.8]} />
+          <meshStandardMaterial color="#2A1D17" roughness={0.85} />
+        </mesh>
+        {/* eyes + goggles strap on forehead */}
+        {[-0.09, 0.09].map((x) => (
+          <mesh key={x} position={[x, 1.6, 0.25]}>
+            <sphereGeometry args={[0.032, 10, 8]} />
+            <meshStandardMaterial color="#1F2937" />
+          </mesh>
+        ))}
+        <mesh position={[0, 1.79, 0.15]} rotation-x={-0.5}>
+          <torusGeometry args={[0.2, 0.025, 8, 24, Math.PI]} />
+          <meshStandardMaterial color="#38BDF8" emissive="#38BDF8" emissiveIntensity={0.25} />
+        </mesh>
+      </group>
+    </>
   );
 }

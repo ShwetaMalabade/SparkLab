@@ -11,10 +11,9 @@ export default function LabDevPage() {
       <LabWorld
         target={target}
         done={done}
-        locked={["titration"]}
         onArrive={(r) => {
           setDone((d) => [...d, r]);
-          const next = ROOMS.find((x) => x.id !== r && !done.includes(x.id) && x.id !== "titration");
+          const next = ROOMS.find((x) => x.id !== r && !done.includes(x.id));
           setTimeout(() => next && setTarget(next.id), 800);
         }}
       />

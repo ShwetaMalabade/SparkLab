@@ -107,3 +107,45 @@ export function posterTexture(title: string, lines: string[], band: string) {
     lines.forEach((l, i) => g.fillText(l, 256, 240 + i * 80));
   });
 }
+
+/** Warm wood planks (hallway floor). Repeat it with texture.repeat. */
+export function plankTexture() {
+  const t = make("planks", 512, 512, (g) => {
+    const cols = ["#C8925E", "#BF8753", "#D29C67", "#B98150", "#C68D59"];
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = cols[i % cols.length];
+      g.fillRect(0, i * 64, 512, 64);
+      g.fillStyle = "rgba(90,50,20,0.35)";
+      g.fillRect(0, i * 64 + 62, 512, 2);
+      const cut = ((i * 197) % 400) + 40;
+      g.fillRect(cut, i * 64, 2, 64);
+      // soft grain
+      g.strokeStyle = "rgba(120,70,30,0.12)";
+      for (let k = 0; k < 6; k++) {
+        g.beginPath();
+        g.moveTo(0, i * 64 + 8 + k * 9);
+        g.bezierCurveTo(170, i * 64 + 4 + k * 9, 340, i * 64 + 14 + k * 9, 512, i * 64 + 8 + k * 9);
+        g.stroke();
+      }
+    }
+  });
+  t.wrapS = t.wrapT = 1000; // RepeatWrapping
+  return t;
+}
+
+/** Soft lab floor tiles in a given colour. */
+export function tileTexture(base: string, line: string) {
+  const t = make(`tiles:${base}`, 256, 256, (g) => {
+    g.fillStyle = base;
+    g.fillRect(0, 0, 256, 256);
+    g.fillStyle = line;
+    for (let i = 0; i <= 4; i++) {
+      g.fillRect(i * 64 - 1, 0, 2, 256);
+      g.fillRect(0, i * 64 - 1, 256, 2);
+    }
+    g.fillStyle = "rgba(255,255,255,0.18)";
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2) g.fillRect(i * 64 + 2, j * 64 + 2, 60, 60);
+  });
+  t.wrapS = t.wrapT = 1000;
+  return t;
+}

@@ -38,7 +38,8 @@ type Props = { worksheet: TWorksheet; session: GameSession; calibrated: boolean 
 
 /** Which room of the lab building a question is played in. */
 export function roomFor(q: TQuestion): RoomId {
-  if (q.template === "mix_lab") return "mix";
+  if (q.template === "mix_lab" || q.template === "mystery_sample") return "mix";
+  if (q.template === "titration_lab") return "titration";
   if (q.template === "equation_balancer") return "balance";
   return "study";
 }
@@ -298,7 +299,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
   return (
     <div className="fixed inset-0 overflow-hidden">
       {walking ? (
-        <LabWorld target={roomFor(question!)} done={doneRooms} locked={["titration"]} onArrive={onArrive} />
+        <LabWorld target={roomFor(question!)} done={doneRooms} onArrive={onArrive} />
       ) : (
         <Arena accent={accent} still={still} room={worldOn && question ? roomFor(question) : null}>
           {/* In the lab world you only see your hands (cursors), not a full body. */}
