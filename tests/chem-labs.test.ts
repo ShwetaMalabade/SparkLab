@@ -3,6 +3,7 @@ import { analyteMolarityFrom, checkScenario, curve, equivalenceML, indicatorColo
 import { COMPOUNDS, lookupCompound, mysteryDistractors, observe, observeAll } from "../src/lib/ions";
 import { assemble } from "../src/lib/assemble";
 import { LenientReadOut } from "../src/lib/agents/reader";
+import { isGas, molarMass, solveStoich } from "../src/lib/stoich";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra: unknown = "") => {
@@ -156,6 +157,56 @@ ok("mystery lab: 5 tests, lilac flame", a.question?.mystery?.tests.length === 5 
 ok("mystery adds its mistakes to the registry", (a.added ?? []).length >= 2 && (a.added ?? []).every((m) => m.label.length > 0), a.added);
 a = assemble(myst("Unobtainium"), anyDesign);
 ok("unknown mystery compound rejected", !a.question && a.errors.some((e) => /isn't in the test table/.test(e)), a.errors);
+
+// ---- Reaction Yield Lab (stoich.ts)
+ok("molar mass H2O = 18.015", near(molarMass("H2O")!, 18.015, 0.001), molarMass("H2O"));
+ok("molar mass Ca(OH)2 = 74.09", near(molarMass("Ca(OH)2")!, 74.092, 0.01), molarMass("Ca(OH)2"));
+ok("molar mass CuSO4·5H2O = 249.68", near(molarMass("CuSO4·5H2O")!, 249.68, 0.02), molarMass("CuSO4·5H2O"));
+ok("unknown element → null", molarMass("Xx2O") === null);
+let st = solveStoich({ equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "Mg", massG: 2.43 }, target: { formula: "H2" }, ask: "mass_g", gasMolarVolumeL: null });
+ok("2.43 g Mg → 0.1000 mol → 0.2016 g H2", st.ok && near(st.r.molesKnown, 0.09998, 1e-4) && near(st.r.answer, 0.2016, 0.0005), st);
+st = solveStoich({ equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "Mg", massG: 2.43 }, target: { formula: "H2" }, ask: "gas_volume_ml", gasMolarVolumeL: 24.0 });
+ok("…and 2400 mL of H2 at 24.0 L/mol", st.ok && near(st.r.answer, 2399.5, 1), st.ok && st.r.answer);
+st = solveStoich({ equation: "2H2 + O2 -> 2H2O", known: { formula: "O2", massG: 32 }, target: { formula: "H2O" }, ask: "mass_g", gasMolarVolumeL: null });
+ok("mole ratio 2:1: 32 g O2 → 36.03 g H2O", st.ok && near(st.r.answer, 36.03, 0.02), st.ok && st.r.answer);
+ok("gas volume of a solid rejected", !solveStoich({ equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "Mg", massG: 2.43 }, target: { formula: "MgCl2" }, ask: "gas_volume_ml", gasMolarVolumeL: 24 }).ok);
+ok("unbalanced equation rejected", !solveStoich({ equation: "Mg + HCl -> MgCl2 + H2", known: { formula: "Mg", massG: 2.43 }, target: { formula: "H2" }, ask: "mass_g", gasMolarVolumeL: null }).ok);
+ok("weighing a product rejected", !solveStoich({ equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "H2", massG: 1 }, target: { formula: "Mg" }, ask: "mass_g", gasMolarVolumeL: null }).ok);
+ok("odd molar volume rejected", !solveStoich({ equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "Mg", massG: 2.43 }, target: { formula: "H2" }, ask: "gas_volume_ml", gasMolarVolumeL: 30 }).ok);
+ok("isGas", isGas("CO2") && isGas("H₂") && !isGas("MgCl2"));
+
+const stq = (o: Record<string, unknown> = {}) => ({
+  ...base, id: "s1", topic: "stoichiometry", concept: "mass-to-mass stoichiometry", prompt: "Mg + 2HCl → MgCl₂ + H₂. Mass of H₂ from 2.43 g Mg?",
+  given: { m: { value: 2.43, unit: "g" }, MMg: { value: 24.3, unit: "g/mol" }, MH2: { value: 2.016, unit: "g/mol" } }, unknown: "m_H2", unit: "g", formula: "m/MMg*MH2",
+  stoich: { equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "Mg", name: "magnesium", massG: 2.43 }, target: { formula: "H2", name: "hydrogen" }, ask: "mass_g", gasMolarVolumeL: 24.0 },
+  ...o,
+}) as never;
+const stDesign = { id: "s1", template: "answer_balloons", templateReason: "r", params: {}, correctWhy: "c",
+  misconceptions: [mis("stopped_at_moles"), mis("used_hcl_coefficient"), mis("inverted_molar_masses")],
+  wrong: [
+    { misconceptionId: "stopped_at_moles", wrongFormula: "m/MMg", text: null, why: "w" },
+    { misconceptionId: "used_hcl_coefficient", wrongFormula: "2*m/MMg*MH2", text: null, why: "w" },
+    { misconceptionId: "inverted_molar_masses", wrongFormula: "m*MMg/MH2", text: null, why: "w" },
+  ] } as never;
+a = assemble(stq(), stDesign);
+ok("stoichiometry → stoich_lab with code's moles and gas volume", a.question?.template === "stoich_lab" && a.question.stoich?.coefTarget === 1 && a.question.stoich.targetIsGas && near(a.question.stoich.gasVolumeML ?? 0, 2400, 2), a.errors);
+ok("molar masses come from the periodic table", near(a.question?.stoich?.mmKnown ?? 0, 24.305, 1e-3) && near(a.question?.stoich?.mmTarget ?? 0, 2.016, 1e-3));
+a = assemble(stq({ formula: "3*m/MMg*MH2" }), stDesign);
+ok("AI formula with the wrong mole ratio rejected", !a.question && a.errors.some((e) => /mole ratio/.test(e)), a.errors);
+a = assemble(stq({ unit: "mg" }), stDesign);
+ok("wrong unit rejected", !a.question && a.errors.some((e) => /unit/.test(e)), a.errors);
+a = assemble(stq({ given: { m: { value: 4.86, unit: "g" }, MMg: { value: 24.3, unit: "g/mol" }, MH2: { value: 2.016, unit: "g/mol" } } }), stDesign);
+ok("an edited mass (m = 4.86 g) drives the lab too", a.question?.stoich?.known.massG === 4.86 && near(a.question.stoich.answer, 0.4032, 0.001), a.errors);
+
+// ---- code adds the standard heavy-metal warning (real scans left it empty and the Mix Lab question was dropped)
+const pbRx = { reactants: [{ formula: "Pb(NO3)2", name: "lead(II) nitrate", state: "aq" }, { formula: "KI", name: "potassium iodide", state: "aq" }],
+  products: [{ formula: "PbI2", name: "lead(II) iodide", state: "s" }, { formula: "KNO3", name: "potassium nitrate", state: "aq" }],
+  equation: "Pb(NO3)2 + 2KI -> PbI2 + 2KNO3", type: "precipitation", observation: "A bright yellow solid forms",
+  visual: { bubbles: false, colorFrom: "#F5F5F5", colorTo: "#F5F5F5", precipitateColor: "#FFD21F", heat: "none", flame: null }, hazard: null };
+a = assemble({ ...base, id: "x1", topic: "reaction_prediction", concept: "precipitation", prompt: "Mix Pb(NO3)2 and KI?", given: {}, unknown: null, unit: null, formula: null, answerText: "A bright yellow solid forms", reaction: pbRx } as never,
+  { id: "x1", template: "mix_lab", templateReason: "r", params: {}, correctWhy: "c", misconceptions: [mis("a1"), mis("a2"), mis("a3")],
+    wrong: [{ misconceptionId: "a1", wrongFormula: null, text: "Bubbles", why: "w" }, { misconceptionId: "a2", wrongFormula: null, text: "Nothing", why: "w" }, { misconceptionId: "a3", wrongFormula: null, text: "White solid", why: "w" }] } as never);
+ok("lead reaction with no hazard → code adds 'Lead compounds are toxic', question kept", a.question?.template === "mix_lab" && a.question.reaction?.hazard === "Lead compounds are toxic", a.errors);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

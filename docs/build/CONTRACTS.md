@@ -8,7 +8,7 @@ Shweta imports: `TWorksheet`, `TQuestion`, `TAttempt`, `Template`, `Reaction`. K
 
 | Field | Meaning for the game |
 |---|---|
-| `question.template` | `"answer_balloons" \| "projectile_launcher" \| "mix_lab" \| "equation_balancer"` (others → Balloons) |
+| `question.template` | `"titration_lab" \| "mystery_sample" \| "stoich_lab" \| "mix_lab" \| "equation_balancer"` (chemistry build; `"answer_balloons"`/`"projectile_launcher"` remain in the type but are no longer sent) |
 | `question.origin` | `"worksheet"` or `"variant"` (variant → show "🧠 New question from your coach") |
 | `question.params.lock` | Launcher: `"speed" \| "angle" \| "none"` |
 | `question.params.decoys` | Mix Lab: up to 2 extra species for decoy beakers |
@@ -18,6 +18,8 @@ Shweta imports: `TWorksheet`, `TQuestion`, `TAttempt`, `Template`, `Reaction`. K
 | `question.reaction` | Mix Lab: `reactants[]`, `products[]`, `equation`, `observation`, `visual{bubbles,colorFrom,colorTo,precipitateColor,heat,flame}`, `hazard` |
 | `question.equation` | Balancer: the balanced answer, e.g. `"2H2 + O2 -> 2H2O"` |
 | `question.titration` | **Titration Lab** (template `"titration_lab"`, added ea3f6e9). `ask` (`"endpoint_ml"` or `"analyte_molarity"`), `analyte {formula,name,volumeML,molarity}` (flask), `titrant {formula,name,molarity}` (burette), `indicator` + `indicatorInfo {name,low,high,acid,base,acidLabel,baseLabel}`, `equivalenceML`, `startPH`, `endPH`, `curve[{ml,pH}]` (0 → 2× end point, dense near it). All code-computed |
+| `question.stoich` | **Reaction Yield Lab** (template `"stoich_lab"`, added e4b2099). `equation`, `known {formula,name,massG}` (weighed), `target {formula,name}`, `ask` (`"mass_g"`\|`"gas_volume_ml"`\|`"moles"`), `gasMolarVolumeL`, and code's `coefKnown`, `coefTarget`, `mmKnown`, `mmTarget`, `molesKnown`, `molesTarget`, `answer`, `targetIsGas`, `gasVolumeML` |
+| **No balloons (e4b2099)** | The server only sends lab questions now: every question has one of `titration`, `mystery`, `stoich`, `reaction` (2 reactants) or `equation`. How each lab looks and plays: `docs/build/LAB-SPEC.md` |
 | `question.mystery` | **Mystery Sample** (template `"mystery_sample"`, added ea3f6e9). `compound {formula,name}` (the answer; don't show it before lock-in) and `tests[5]` = `{test: "flame"\|"naoh"\|"agno3"\|"bacl2"\|"hcl", label, detail, effect: "flame"\|"precipitate"\|"bubbles"\|"none", color (hex or null), text}`. All code-decided |
 
 ## 2. Client API — `src/lib/client/api.ts` (Dharm owns; Shweta calls)

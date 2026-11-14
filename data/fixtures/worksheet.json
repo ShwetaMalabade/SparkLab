@@ -624,6 +624,7 @@
         ]
       },
       "mystery": null,
+      "stoich": null,
       "choices": [
         {
           "id": "A",
@@ -726,6 +727,7 @@
           }
         ]
       },
+      "stoich": null,
       "choices": [
         {
           "id": "A",
@@ -818,6 +820,7 @@
       "equation": null,
       "titration": null,
       "mystery": null,
+      "stoich": null,
       "choices": [
         {
           "id": "A",
@@ -873,6 +876,7 @@
       "equation": "2H2 + O2 -> 2H2O",
       "titration": null,
       "mystery": null,
+      "stoich": null,
       "choices": [
         {
           "id": "A",
@@ -912,7 +916,7 @@
       "subject": "chemistry",
       "topic": "stoichiometry",
       "concept": "mass-to-mass stoichiometry",
-      "template": "answer_balloons",
+      "template": "stoich_lab",
       "params": {
         "lock": "none"
       },
@@ -941,6 +945,29 @@
       "equation": null,
       "titration": null,
       "mystery": null,
+      "stoich": {
+        "equation": "Mg + 2HCl -> MgCl2 + H2",
+        "known": {
+          "formula": "Mg",
+          "name": "magnesium",
+          "massG": 2.43
+        },
+        "target": {
+          "formula": "H2",
+          "name": "hydrogen gas"
+        },
+        "ask": "mass_g",
+        "gasMolarVolumeL": 24,
+        "coefKnown": 1,
+        "coefTarget": 1,
+        "mmKnown": 24.305,
+        "mmTarget": 2.016,
+        "molesKnown": 0.09998,
+        "molesTarget": 0.09998,
+        "answer": 0.2016,
+        "targetIsGas": true,
+        "gasVolumeML": 2400
+      },
       "choices": [
         {
           "id": "A",
@@ -1072,5 +1099,5 @@
       "concept": "mass-to-mass stoichiometry"
     }
   ],
-  "createdAt": "2026-11-14T19:58:54.073Z"
+  "createdAt": "2026-11-14T20:19:56.324Z"
 }

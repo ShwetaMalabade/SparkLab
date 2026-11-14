@@ -1,5 +1,5 @@
 // scripts/make-fixture.ts — Builds data/fixtures/worksheet.json for P1 to develop against (chemistry-only since the pivot:
-// q1 Titration Lab, q2 Mystery Sample, q3 Mix Lab, q4 Equation Balancer, q5 stoichiometry balloons).
+// q1 Titration Lab, q2 Mystery Sample, q3 Mix Lab, q4 Equation Balancer, q5 Reaction Yield Lab).
 // The drafts below are shaped like real Agent 1 + Agent 2 output; the REAL assemble() + code checks build every
 // question, so the fixture matches the live schema exactly. Dev-only: never shown in the demo.
 // Run: npx tsx scripts/make-fixture.ts
@@ -55,8 +55,9 @@ const built = [
               { misconceptionId: "changed_subscripts", wrongFormula: null, text: "H2 + O2 -> H2O2", why: "That's a different chemical." }] } as any),
   assemble({ ...base, id: "q5", subject: "chemistry", topic: "stoichiometry", concept: "mass-to-mass stoichiometry",
       prompt: "Mg + 2HCl → MgCl₂ + H₂. What mass of hydrogen gas forms from 2.43 g of magnesium? (Mg = 24.3 g/mol, H₂ = 2.016 g/mol)",
-      unknown: "m_H2", given: { m: { value: 2.43, unit: "g" }, MMg: { value: 24.3, unit: "g/mol" }, MH2: { value: 2.016, unit: "g/mol" } }, unit: "g", formula: "m/MMg*MH2" },
-    { id: "q5", template: "answer_balloons", templateReason: "numeric stoichiometry", params: {}, misconceptions: misS, correctWhy: "2.43 g ÷ 24.3 = 0.100 mol Mg = 0.100 mol H₂ × 2.016 = 0.202 g.",
+      unknown: "m_H2", given: { m: { value: 2.43, unit: "g" }, MMg: { value: 24.3, unit: "g/mol" }, MH2: { value: 2.016, unit: "g/mol" } }, unit: "g", formula: "m/MMg*MH2",
+      stoich: { equation: "Mg + 2HCl -> MgCl2 + H2", known: { formula: "Mg", name: "magnesium", massG: 2.43 }, target: { formula: "H2", name: "hydrogen gas" }, ask: "mass_g", gasMolarVolumeL: 24.0 } },
+    { id: "q5", template: "stoich_lab", templateReason: "weigh, react, collect the gas", params: {}, misconceptions: misS, correctWhy: "2.43 g ÷ 24.3 = 0.100 mol Mg = 0.100 mol H₂ × 2.016 = 0.202 g.",
       wrong: [{ misconceptionId: "stopped_at_moles", wrongFormula: "m/MMg", text: null, why: "0.100 is moles; multiply by 2.016 g/mol." },
               { misconceptionId: "used_hcl_coefficient", wrongFormula: "2*m/MMg*MH2", text: null, why: "The 2 belongs to HCl." },
               { misconceptionId: "inverted_molar_masses", wrongFormula: "m*MMg/MH2", text: null, why: "Divide by Mg's molar mass." }] } as any),
