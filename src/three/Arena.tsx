@@ -9,6 +9,8 @@ import { Suspense, useRef, type ReactNode } from "react";
 import type { PerspectiveCamera } from "three";
 import { FpsProbe } from "./FpsMeter";
 import { reportFps, useQuality } from "./quality";
+import { StationBackdrop, StationRoom } from "./lab/StationBackdrop";
+import type { RoomId } from "./lab/LabWorld";
 
 export const NAVY = "#0B1020";
 export const CAMERA_POS: [number, number, number] = [0, 1.6, 7];
@@ -22,9 +24,11 @@ export type ArenaProps = {
   still?: boolean;
   bloom?: number;
   className?: string;
+  /** Lab world: draw this room behind the bench instead of the neon grid. */
+  room?: RoomId | null;
 };
 
-export function Arena({ children, accent = "#22D3EE", still = false, bloom = 0.8, className = "" }: ArenaProps) {
+export function Arena({ children, accent = "#22D3EE", still = false, bloom = 0.8, className = "", room = null }: ArenaProps) {
   const level = useQuality((q) => q.level); // P1-20: steps down by itself if the render loop stays under 30 fps
   return (
     <div className={`absolute inset-0 h-full w-full ${className}`}>
@@ -35,12 +39,12 @@ export function Arena({ children, accent = "#22D3EE", still = false, bloom = 0.8
         camera={{ position: CAMERA_POS, fov: CAMERA_FOV, near: 0.1, far: 100 }}
         onCreated={({ camera }) => camera.lookAt(...CAMERA_TARGET)}
       >
-        <color attach="background" args={[NAVY]} />
-        <fog attach="fog" args={[NAVY, 9, 28]} />
+        <color attach="background" args={[room ? "#2A2440" : NAVY]} />
+        {!room && <fog attach="fog" args={[NAVY, 9, 28]} />}
         <ambientLight intensity={0.35} />
         <directionalLight position={[3, 6, 4]} intensity={0.8} />
         <CameraSway still={still} />
-        <Floor accent={accent} />
+        {room ? <StationBackdrop room={room} /> : <Floor accent={accent} />}
         <ContactShadows position={[0, 0.001, 0]} opacity={0.55} scale={14} blur={2.4} far={4} resolution={512} color="#000000" />
         {level < 2 && (
           <Suspense fallback={null}>
@@ -48,9 +52,9 @@ export function Arena({ children, accent = "#22D3EE", still = false, bloom = 0.8
           </Suspense>
         )}
         <FpsProbe onFps={reportFps} />
-        {children}
+        <StationRoom.Provider value={room}>{children}</StationRoom.Provider>
         <EffectComposer multisampling={0}>
-          <Bloom intensity={level >= 3 ? Math.min(bloom, 0.5) : bloom} luminanceThreshold={0.2} luminanceSmoothing={0.2} mipmapBlur />
+          <Bloom intensity={room ? 0.35 : level >= 3 ? Math.min(bloom, 0.5) : bloom} luminanceThreshold={room ? 0.75 : 0.2} luminanceSmoothing={0.2} mipmapBlur />
         </EffectComposer>
       </Canvas>
     </div>

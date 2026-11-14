@@ -9,9 +9,10 @@
 //   END     coach says finish, no questions left, or time budget used → endSession → /results/[id]
 // Timers run on a game clock that stops while paused (tracking lost or P). N skips at any time.
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { endSession, nextStep, postAttempt, type NextStep } from "@/lib/client/api";
-import type { TWorksheet } from "@/lib/schema";
+import type { TQuestion, TWorksheet } from "@/lib/schema";
+import { LabWorld, roomOf, type RoomId } from "@/three/lab/LabWorld";
 import { Arena } from "@/three/Arena";
 import { Avatar } from "@/three/Avatar";
 import { HandCursors } from "@/three/HandCursor";
@@ -35,12 +36,27 @@ const CHEMISTRY = "#E879F9";
 
 type Props = { worksheet: TWorksheet; session: GameSession; calibrated: boolean };
 
+/** Which room of the lab building a question is played in. */
+export function roomFor(q: TQuestion): RoomId {
+  if (q.template === "mix_lab") return "mix";
+  if (q.template === "equation_balancer") return "balance";
+  return "study";
+}
+
+/** Lab world (walk between rooms) is on for chemistry worksheets; `?world=0` turns it off. */
+function useWorldOn(worksheet: TWorksheet) {
+  const [off] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("world") === "0");
+  return !off && worksheet.questions.some((q) => q.subject === "chemistry");
+}
+
 export function GameRunner({ worksheet, session, calibrated }: Props) {
   const router = useRouter();
   const [phaseMs, setPhaseMs] = useState(0);
   const question = useGame((s) => s.question);
   const phase = useGame((s) => s.phase);
   const paused = useGame((s) => s.paused);
+  const worldOn = useWorldOn(worksheet);
+  const [doneRooms, setDoneRooms] = useState<RoomId[]>([]);
 
   // Game clock (ms, excludes pauses) and phase bookkeeping live in refs: the ticker reads them every 100 ms.
   const clock = useRef(0);
@@ -51,6 +67,11 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
   const fetching = useRef(false);
   const lockToken = useRef(0);
   const started = useRef(false);
+
+  const world = useRef(worldOn);
+  useEffect(() => {
+    world.current = worldOn;
+  }, [worldOn]);
 
   // All loop logic in one ref so bus handlers and the ticker always see the latest version.
   const loop = useRef({
@@ -102,8 +123,25 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
       waitingForNext.current = false;
       G.resetArming();
       G.setGame({ question: q, played: [...G.played, q.id], caption: q.prompt, coachLine: null, lastResult: null, templateHint: null, skipHandler: null });
+      if (world.current) {
+        // Lab world: walk to the room first; the question is read when you arrive.
+        const room = roomOf(roomFor(q));
+        G.setGame({ caption: `🧠 Coach: head to the ${room.name}` });
+        loop.current.setPhase("walk");
+        sayNow(`${q.origin === "variant" ? "New question from your coach. " : ""}Head to the ${room.name}.`);
+        return;
+      }
       loop.current.setPhase("intro");
       sayNow(q.origin === "variant" ? `New question from your coach. ${q.prompt}` : q.prompt);
+    },
+
+    /** Lab world: the student walked into the room of the current question. */
+    arrive() {
+      const G = useGame.getState();
+      if (G.phase !== "walk" || !G.question) return;
+      G.setGame({ caption: G.question.prompt });
+      loop.current.setPhase("intro");
+      sayNow(G.question.prompt);
     },
 
     /** LOCK-IN from the template. */
@@ -122,6 +160,7 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
         lastResult: { ...r, points }, caption: `${r.correct ? "✓" : "✗"} ${why}`, coachLine: null,
       });
       loop.current.setPhase("reveal");
+      if (world.current) setDoneRooms((d) => (d.includes(roomFor(q)) ? d : [...d, roomFor(q)]));
       playSfx(r.correct ? "correct" : "wrong");
       sayNow(why);
 
@@ -156,6 +195,8 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
       const G = useGame.getState();
       if (G.paused) return;
       switch (G.phase) {
+        case "walk":
+          return loop.current.arrive();
         case "intro":
           return loop.current.setPhase("play");
         case "play":
@@ -251,15 +292,22 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
   const still = phase === "play" || !!tpl?.def.still || reducedMotion; // no camera sway while aiming (or if reduced motion)
   const templateHint = useGame((s) => s.templateHint);
   const avatar = tpl?.def.avatar ?? { position: [0, -0.2, -2.2] as [number, number, number], scale: 0.9 };
+  const walking = worldOn && phase === "walk" && !!question;
+  const onArrive = useCallback(() => loop.current.arrive(), []);
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      <Arena accent={accent} still={still}>
-        <Avatar color={accent} position={avatar.position} scale={avatar.scale} />
-        {question && tpl?.def.Scene && <tpl.def.Scene key={question.id} question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />}
-      </Arena>
+      {walking ? (
+        <LabWorld target={roomFor(question!)} done={doneRooms} locked={["titration"]} onArrive={onArrive} />
+      ) : (
+        <Arena accent={accent} still={still} room={worldOn && question ? roomFor(question) : null}>
+          {/* In the lab world you only see your hands (cursors), not a full body. */}
+          {!worldOn && <Avatar color={accent} position={avatar.position} scale={avatar.scale} />}
+          {question && tpl?.def.Scene && <tpl.def.Scene key={question.id} question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />}
+        </Arena>
+      )}
       <WorldLabelsLayer />
-      {question && tpl && (
+      {question && tpl && !walking && (
         // Fade each new question in (opacity only, so dwell-target rects never move).
         <div key={question.id} className="pointer-events-none absolute inset-0 animate-[qfade_0.45s_ease-out]">
           <tpl.def.Overlay question={question} worksheet={worksheet} phase={phase} paused={paused} onLock={onLock} />
@@ -270,11 +318,15 @@ export function GameRunner({ worksheet, session, calibrated }: Props) {
       }`}</style>
       <GameHud
         accent={accent}
-        hint={phase === "next" ? "Raise both hands (or Enter) for the next question" : templateHint ?? (tpl ? tpl.def.hint(question!) : "")}
+        hint={
+          walking ? "WASD / arrow keys to walk · Enter: go straight there"
+          : phase === "next" ? "Raise both hands (or Enter) for the next question"
+          : templateHint ?? (tpl ? tpl.def.hint(question!) : "")
+        }
         phaseMs={phaseMs}
         total={worksheet.questions.length}
       />
-      {!paused && phase !== "end" && <HandCursors accent={accent} />}
+      {!paused && phase !== "end" && !walking && <HandCursors accent={accent} />}
       <TraceDrawer />
     </div>
   );

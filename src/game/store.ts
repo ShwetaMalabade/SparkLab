@@ -34,7 +34,8 @@ export type MotionSlice = {
 };
 
 // ---------- Game slice (P1-09, docs/plan/05 §1) ----------
-export type Phase = "intro" | "play" | "lockin" | "reveal" | "next" | "end";
+/** "walk" = walking through the lab building to the room of the next question (lab world on). */
+export type Phase = "walk" | "intro" | "play" | "lockin" | "reveal" | "next" | "end";
 
 export type GameSession = { sessionId: string; classCode: string; worksheetId: string; timeBudgetSec: number; nickname: string };
 

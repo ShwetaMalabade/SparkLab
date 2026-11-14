@@ -16,6 +16,7 @@ import type { Side } from "@/motion/types";
 import { Bubbles, type Place } from "@/three/effects/Bubbles";
 import { Precipitate } from "@/three/effects/Precipitate";
 import { ChemText } from "../ChemText";
+import { useStationRoom } from "@/three/lab/StationBackdrop";
 import { playSfx } from "../sfx";
 import { subscribe, useGame, type LockResult } from "../store";
 import { AnswerBalloons } from "./AnswerBalloons";
@@ -271,7 +272,8 @@ function Scene(props: TemplateProps) {
 }
 
 function Bench() {
-  const ref = useRef<Mesh>(null);
+  const ref = useRef<Mesh & Group>(null);
+  const lab = useStationRoom() !== null;
   const { camera, size } = useThree();
   const tmp = useMemo(() => new Vector3(), []);
   useFrame(() => {
@@ -280,6 +282,20 @@ function Bench() {
     toPlane(r.x + r.w / 2, r.y + r.h, size.width, size.height, camera, Z, tmp);
     ref.current.position.set(0, tmp.y - 0.06, Z - 0.2);
   });
+  if (lab)
+    // Inside the lab world: a real lab bench (pale epoxy top, cabinets down to the floor).
+    return (
+      <group ref={ref}>
+        <mesh>
+          <boxGeometry args={[11, 0.1, 1.8]} />
+          <meshStandardMaterial color="#E5E7EB" roughness={0.35} />
+        </mesh>
+        <mesh position={[0, -0.5, 0.05]}>
+          <boxGeometry args={[10.8, 0.9, 1.6]} />
+          <meshStandardMaterial color="#E9DCC6" roughness={0.8} />
+        </mesh>
+      </group>
+    );
   return (
     <mesh ref={ref}>
       <boxGeometry args={[11, 0.1, 1.6]} />
