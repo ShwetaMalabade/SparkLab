@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 09:05 · **Now working on:** Phase 3 (P2-19 TTL indexes next) · **Branch:** main
+**Last updated:** Sat 09:05 · **Now working on:** Phase 3 (P2-20 Classmates waits on Merge 2; P2-21 is Dharm's by hand) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -28,7 +28,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-16 | Live phone page `/live/[code]` | 🟦 | 61cc03a | Polls 2 s, no toasts on first load, toast + vibrate for real answers only (0.8 s locally), grid/mistakes/bars/coach feed. Done-when needs a deploy: real phone on venue Wi-Fi + cellular |
 | P2-17 | Teacher insight | ✅ | 15421cf | insight.ts + POST /api/class/[code]/insights + phone card "✓ numbers checked". numbersAllowed on bullets, nextMove and groups; unknown nicknames dropped; cache 20 s (longer if the class is unchanged). 21 scripted checks. Real-model wording check needs a key |
 | P2-18 | Results page | ✅ | 23aa53c | Score (first answer per question), accuracy by topic, top mistake + why, time played, coach note + its questions, Play again. GET /api/session/[id]/results; mock/offline-network → this device's record. 19 checks + Chrome (mock) |
-| P2-19 | TTL indexes | ⬜ | | |
+| P2-19 | TTL indexes | 🟦 | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"); conflict → warning, not a crash. 6 checks vs a fake Mongo; confirm on Atlas once MONGODB_URI is set |
 | P2-20 | Classmates | ⬜ | | |
 | P2-21 | Peri + domain | ⬜ | | |
 | P2-22 | Offline mode | ⬜ | | |
