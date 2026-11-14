@@ -40,3 +40,39 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ---- Homework Arena additions ----
+
+# secrets / cloud credentials (keys live only in .env.local and Vercel env vars)
+*.key
+*.p12
+credentials*.json
+service-account*.json
+*-sa.json
+.aws/
+
+# editors / OS
+.vscode/
+.idea/
+*.swp
+*~
+Thumbs.db
+
+# logs
+*.log
+
+# local AI-tool settings (personal; AGENTS.md / CLAUDE.md ARE committed)
+.claude/settings.local.json
+graphify-out/
+
+# real worksheet photos used for prompt testing (teacher's material + privacy),
+# and the large backup demo video — share these outside git
+/test-photos/
+/scratch/
+/videos/
+*.mov
+*.heic
+*.HEIC
+
+# NOT ignored on purpose (needed by Vercel + offline demo):
+#   public/models/*.task, public/mediapipe-wasm/**, public/sfx/**, data/replay/**, data/fixtures/**
