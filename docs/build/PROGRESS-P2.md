@@ -15,7 +15,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-03 | Paste the tested code | ✅ | 4abe446 | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ✅ | 5407174 | api.ts + types.ts exactly as CONTRACTS §2, mock mode; fixture q1 launcher · q2 balloons · q3 mix lab · q4 balancer; speak.ts; results stub |
 | P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Waiting on Dharm: AI Studio keys + model names + real RPM/RPD, Atlas cluster, Vercel project + env vars |
-| P2-06 | Business + demo worksheet | ⬜ | | |
+| P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
 | P2-07 | Database | ⬜ | | |
 | P2-08 | Agents 1 + 2 | ⬜ | | |
 | P2-09 | Scan pipeline + `/api/ingest` | ⬜ | | |
