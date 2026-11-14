@@ -2,7 +2,7 @@
 **Written ONLY by P2's LLM.** P1's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 02:15 · **Now working on:** P2-03 · **Branch:** main
+**Last updated:** Sat 02:15 · **Now working on:** P2-04 · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -12,7 +12,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 |---|---|---|---|---|
 | P2-01 | Repo + scaffold | ✅ | 4bfdc3a | Next 16.4 + Tailwind v4 (no tailwind.config; tokens go in globals.css @theme). Build + lint green. Not pushed yet (no GitHub remote) |
 | P2-02 | Design tokens + layout | ✅ | b16219d | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
-| P2-03 | Paste the tested code | ⬜ | | |
+| P2-03 | Paste the tested code | ✅ | 99f2adc | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ⬜ | | |
 | P2-05 | Accounts + quota | ⬜ | | |
 | P2-06 | Business + demo worksheet | ⬜ | | |
