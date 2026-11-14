@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 09:05 · **Now working on:** Phase 3 (P2-20 Classmates waits on Merge 2; P2-21 is Dharm's by hand) · **Branch:** main
+**Last updated:** Sat 13:20 · **Now working on:** — (Phase 4 code done; waiting for Dharm: Atlas network access, live replay recording, backup video, P2-20 decision) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -14,7 +14,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-02 | Design tokens + layout | ✅ | 2d04bbf | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
 | P2-03 | Paste the tested code | ✅ | 4abe446 | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ✅ | 5407174 | api.ts + types.ts exactly as CONTRACTS §2, mock mode; fixture q1 launcher · q2 balloons · q3 mix lab · q4 balancer; speak.ts; results stub |
-| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Atlas cluster ✓ (connects in <1 s, round trip + $facet ok). Still waiting on Dharm: AI Studio key + model names + real RPM/RPD, Vercel env vars |
+| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Atlas ✓. Gemini key ✓, test-ai `{"ok":true}` on both: vision gemini-3.5-flash (~9 s; 3.7/3.8-flash were 503/timeouts today), fast gemini-3.5-flash-lite (~1 s). Still waiting on Dharm: real RPM/RPD from AI Studio, Vercel env vars |
 | P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
 | P2-07 | Database | ✅ | 0809611 | db.ts (Mongo, cached client, indexes) + memoryDb.ts (OFFLINE=1), same Store interface; classCode.ts. 32 checks vs local Mongo + memory. aggregateClass comes with P2-15 |
 | P2-08 | Agents 1 + 2 | 🟦 | 108515b | prompts.ts (verbatim from 03 §4) + reader.ts + designer.ts done. Still to do: test the prompts on 3 real worksheet photos (needs a Gemini key) |
@@ -31,9 +31,9 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-19 | TTL indexes | ✅ | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"). Confirmed on Atlas: all 4 TTL indexes + the query indexes exist |
 | P2-20 | Classmates | ⬜ | | |
 | P2-21 | Peri + domain | ⬜ | | |
-| P2-22 | Offline mode | ⬜ | | |
-| P2-23 | Record a replay | ⬜ | | |
-| P2-24 | Backup video + Devpost draft | ⬜ | | |
+| P2-22 | Offline mode | ✅ | 4401929 | OFFLINE=1: memory store seeded from data/replay/seed.json (worksheet + "replay" alias); unrecorded photo → recorded scan (labelled); coach reuses the recorded decision for the same answer, code-checked, else fallback. 17 checks + OFFLINE build/start. Wi-Fi-off run is P2-23 |
+| P2-23 | Record a replay | 🟦 | afb0a2a | scripts/export-replay.ts <CLASS> → data/replay/aiCalls.json + seed.json; 14 round-trip checks (live run → export → offline coach follows it). Still to do: play one demo in live mode, export, Wi-Fi-off test (needs Atlas network access fixed) |
+| P2-24 | Backup video + Devpost draft | 🟦 | ff27ff5 | DEVPOST.md drafted from 10 §4, "4 AI agents + code checks", only built features claimed; [TODO]s for links/GIFs/Peri. Still to do by Dharm: record the 2-min backup video (11 §2) |
 | P2-25 | Ship | ⬜ | | |
 
 ## Requests to Shweta

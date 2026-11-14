@@ -14,7 +14,8 @@ import { db, newId } from "./db";
 import { compute, lintFormula, relDiff } from "./verifyPhysics";
 import type { IngestStep } from "./client/types";
 import type { Misconception, TQuestion, TWorksheet } from "./schema";
-import { saveWorksheet } from "./worksheetStore";
+import { REPLAY_WS_ID } from "./replaySeed";
+import { loadDropped, loadWorksheet, saveWorksheet } from "./worksheetStore";
 
 type R = TReadOut["questions"][number];
 type M = z.infer<typeof Misconception>;
@@ -91,9 +92,19 @@ export async function ingest(
     if (!r.ok && r.issues.length && r.raw) r = await deps.repairRead(r.raw, r.issues, { image: input.image, ctx });
     return r.ok
       ? { value: r.data, detail: `${r.data.questions.length} questions read` }
-      : { value: null, status: "error" as const, detail: r.error };
+      : { value: null, status: "error" as const, detail: r.error === "no recorded output" ? "offline: this photo isn't in the recording" : r.error };
   });
-  if (!read) return { ok: false, status: 422, error: NOTHING_READ };
+  if (!read) {
+    // Offline (no network, OFFLINE=1): a photo that isn't the recorded one can't be read, so open the recorded
+    // scan instead and say so on the Scan screen. Everything in it was already checked by code when it was recorded.
+    const recorded = process.env.OFFLINE === "1" ? await loadWorksheet(REPLAY_WS_ID) : null;
+    if (!recorded) return { ok: false, status: 422, error: NOTHING_READ };
+    const worksheet = await timed("save", async () => {
+      const linked = await db.update("classes", { _id: input.classCode }, { $set: { worksheetId: recorded.id } });
+      return { value: recorded, detail: `offline: no network, so this is the recorded scan${linked ? `, class ${input.classCode} linked` : ""}` };
+    });
+    return { ok: true, worksheet, dropped: await loadDropped(recorded.id) };
+  }
   const reads = new Map(read.questions.map((q) => [q.id, q]));
 
   // ---- code checks the AI's answers

@@ -98,6 +98,12 @@ export const memoryDb: Store = {
   },
 };
 
+/** Offline start-up: add recorded documents (data/replay/seed.json). Idempotent: ids already present are kept. */
+export function seedMemoryDb(docs: Partial<Record<Collection, Doc[]>>): void {
+  for (const [coll, list] of Object.entries(docs) as [Collection, Doc[]][])
+    for (const d of list) if (!tables()[coll].some((x) => x._id === d._id)) tables()[coll].push(copy(d));
+}
+
 /** Test helper: empty every table. */
 export function resetMemoryDb(): void {
   g.__haMemoryDb = undefined;

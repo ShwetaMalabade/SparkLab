@@ -3,7 +3,8 @@
 // Next.js reloads/serverless instances would otherwise open a new pool each time.
 import { MongoClient, MongoServerError, type Db as MongoDb } from "mongodb";
 import { DuplicateIdError, newId, type ClassFacet, type Collection, type Doc, type FindOptions, type Filter, type Store, type Update } from "./dbTypes";
-import { memoryDb } from "./memoryDb";
+import { memoryDb, seedMemoryDb } from "./memoryDb";
+import { loadReplaySeed, seedDocs } from "./replaySeed";
 
 export type { AiCallLog, ClassFacet, Collection, Doc, Filter, FirstAttempt, Store, Update } from "./dbTypes";
 export { DuplicateIdError, newId } from "./dbTypes";
@@ -136,5 +137,9 @@ export const mongoDb: Store = {
   },
 };
 
-/** The store every route uses. OFFLINE=1 → memory (demo laptop, Wi-Fi off). */
+/** The store every route uses. OFFLINE=1 → memory (demo laptop, Wi-Fi off), pre-loaded with the recorded scan. */
 export const db: Store = process.env.OFFLINE === "1" ? memoryDb : mongoDb;
+if (process.env.OFFLINE === "1") {
+  const seed = loadReplaySeed();
+  if (seed) seedMemoryDb(seedDocs(seed));
+}

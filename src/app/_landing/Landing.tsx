@@ -9,7 +9,8 @@ import { Flask } from "./Flask";
 // Browser storage is read with useSyncExternalStore: the server render sees the fallback and the
 // browser sees the stored value, with no hydration mismatch and no setState inside an effect.
 const noSubscribe = () => () => {};
-const lastScan = () => getLastWorksheetId() ?? (getMode() === "mock" ? "fixture" : null);
+// Offline, "replay" is the recorded scan (data/replay/seed.json), so the button works on any laptop.
+const lastScan = () => getLastWorksheetId() ?? (getMode() === "mock" ? "fixture" : getMode() === "offline" ? "replay" : null);
 
 export function Landing() {
   const router = useRouter();
@@ -44,9 +45,15 @@ export function Landing() {
     setBusy(true);
     try {
       // A class linked to the last worksheet right away: no scan, no AI calls.
-      const c = await createClass({ timeBudgetSec: budget, worksheetId: lastWs });
+      let ws = lastWs;
+      // Offline, a live-mode scan id isn't in memory: open the recorded scan instead.
+      const c = await createClass({ timeBudgetSec: budget, worksheetId: ws }).catch((e) => {
+        if (getMode() !== "offline" || ws === "replay") throw e;
+        ws = "replay";
+        return createClass({ timeBudgetSec: budget, worksheetId: ws });
+      });
       setCreatedCode(c.code);
-      router.push(`/review/${lastWs}`);
+      router.push(`/review/${ws}`);
     } catch {
       setError("That last scan is no longer available. Scan the worksheet again.");
       setBusy(false);
