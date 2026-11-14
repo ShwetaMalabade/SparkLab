@@ -1,6 +1,7 @@
 // tests/chem-labs.test.ts — Titration Lab (acidBase.ts) and Mystery Sample (ions.ts) chemistry. PASS/FAIL harness, run with `npx tsx`.
 import { analyteMolarityFrom, checkScenario, curve, equivalenceML, indicatorColor, indicatorFits, lookupAcidBase, phAt, type Scenario } from "../src/lib/acidBase";
 import { COMPOUNDS, lookupCompound, mysteryDistractors, observe, observeAll } from "../src/lib/ions";
+import { assemble } from "../src/lib/assemble";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra: unknown = "") => {
@@ -92,6 +93,56 @@ ok("every compound gets 3 distinct distractors that a test can tell apart", allG
 const dk = mysteryDistractors(kcl);
 ok("KCl's distractors are close (≤ 2 tests differ)", dk.every((y) => y.differsOn.length <= 2), dk.map((y) => [y.compound.formula, y.differsOn]));
 ok("KCl's distractors teach ≥ 2 different mistakes", new Set(dk.map((y) => y.misconceptionId)).size >= 2, dk.map((y) => y.misconceptionId));
+
+// ---- assemble(): the two new lab paths
+const base = { subject: "chemistry", printedChoices: null, reaction: null, equation: null, confidence: 0.95, answerText: "", printedAnswer: null } as const;
+const titr = (o: Record<string, unknown> = {}) => ({
+  ...base, id: "t1", topic: "acid_base_ph", concept: "titration end point", prompt: "25.0 mL of 0.100 M HCl is titrated with 0.100 M NaOH. End point volume?",
+  given: { Ma: { value: 0.1, unit: "M" }, Va: { value: 25, unit: "mL" }, Mt: { value: 0.1, unit: "M" } }, unknown: "Vt", unit: "mL", formula: "Ma*Va/Mt",
+  titration: { analyte: { formula: "HCl", name: "hydrochloric acid", volumeML: 25, molarity: 0.1 }, titrant: { formula: "NaOH", name: "sodium hydroxide", molarity: 0.1 }, indicator: "phenolphthalein", endpointML: null },
+  ...o,
+}) as never;
+const mis = (id: string) => ({ id, label: id, why: "w", concept: "c" });
+const titrDesign = { id: "t1", template: "answer_balloons", templateReason: "r", params: {}, correctWhy: "c",
+  misconceptions: [mis("used_titrant_volume"), mis("inverted_ratio"), mis("doubled_volume")],
+  wrong: [
+    { misconceptionId: "used_titrant_volume", wrongFormula: "Va*Mt", text: null, why: "w" },
+    { misconceptionId: "inverted_ratio", wrongFormula: "Mt*Va/Ma/2", text: null, why: "w" },
+    { misconceptionId: "doubled_volume", wrongFormula: "2*Ma*Va/Mt", text: null, why: "w" },
+  ] } as never;
+let a = assemble(titr(), titrDesign);
+ok("titration → titration_lab with the code-computed end point", a.question?.template === "titration_lab" && a.question.answer.value === 25 && a.question.titration?.equivalenceML === 25, a.errors);
+ok("titration lab carries a curve and pH 7 at the end", (a.question?.titration?.curve.length ?? 0) > 100 && a.question?.titration?.endPH === 7, a.question?.titration?.endPH);
+ok("4 choices, one correct", a.question?.choices.length === 4 && a.question.choices.filter((c) => c.correct).length === 1);
+a = assemble(titr({ titration: { analyte: { formula: "H2SO4", name: "sulfuric acid", volumeML: 25, molarity: 0.1 }, titrant: { formula: "NaOH", name: "sodium hydroxide", molarity: 0.1 }, indicator: "phenolphthalein", endpointML: null } }), titrDesign);
+ok("AI formula ignoring H2SO4's 2:1 ratio is rejected (reader must fix it)", !a.question && a.errors.some((e) => /mole ratio/.test(e)), a.errors);
+a = assemble(titr({ titration: { analyte: { formula: "HZz", name: "?", volumeML: 25, molarity: 0.1 }, titrant: { formula: "NaOH", name: "sodium hydroxide", molarity: 0.1 }, indicator: "phenolphthalein", endpointML: null } }), titrDesign);
+ok("unknown acid rejected", !a.question && a.errors.some((e) => /unknown acid/.test(e)), a.errors);
+a = assemble(titr({ unit: "L" }), titrDesign);
+ok("end point in liters rejected (unit must be mL)", !a.question && a.errors.some((e) => /unit/.test(e)), a.errors);
+a = assemble(titr({ titration: { analyte: { formula: "CH3COOH", name: "acetic acid", volumeML: 25, molarity: 0.1 }, titrant: { formula: "NaOH", name: "sodium hydroxide", molarity: 0.1 }, indicator: "methyl_orange", endpointML: null } }), titrDesign);
+ok("wrong indicator for a weak acid → flagged, still playable", a.question?.template === "titration_lab" && a.question.flags.includes("indicator_mismatch:methyl_orange"), a.question?.flags);
+a = assemble(titr({ given: { Ma: { value: 0.2, unit: "M" }, Va: { value: 25, unit: "mL" }, Mt: { value: 0.1, unit: "M" } } }), titrDesign);
+ok("an edited given (Ma 0.2) drives the lab too → 50 mL", a.question?.answer.value === 50 && a.question.titration?.equivalenceML === 50 && a.question.titration.analyte.molarity === 0.2, a.errors);
+const conc = titr({ id: "t2", prompt: "25.0 mL of HCl needs 21.4 mL of 0.100 M NaOH. [HCl]?", unknown: "Ma", unit: "M", formula: "Mt*Vt/Va",
+  given: { Vt: { value: 21.4, unit: "mL" }, Va: { value: 25, unit: "mL" }, Mt: { value: 0.1, unit: "M" } },
+  titration: { analyte: { formula: "HCl", name: "hydrochloric acid", volumeML: 25, molarity: null }, titrant: { formula: "NaOH", name: "sodium hydroxide", molarity: 0.1 }, indicator: "phenolphthalein", endpointML: 21.4 } });
+a = assemble(conc, { ...(titrDesign as object), id: "t2", wrong: [
+  { misconceptionId: "used_titrant_volume", wrongFormula: "Mt*Va/Vt", text: null, why: "w" },
+  { misconceptionId: "inverted_ratio", wrongFormula: "Vt/(Mt*Va)", text: null, why: "w" },
+  { misconceptionId: "doubled_volume", wrongFormula: "2*Mt*Vt/Va", text: null, why: "w" }] } as never);
+ok("find-the-concentration titration → 0.0856 M, lab ask = analyte_molarity", a.question?.titration?.ask === "analyte_molarity" && Math.abs((a.question.answer.value ?? 0) - 0.0856) < 1e-6 && a.question.titration.equivalenceML === 21.4, a.errors);
+
+const myst = (compound: string) => ({ ...base, id: "m1", topic: "other_chemistry", concept: "identify ions", prompt: "Identify the white solid.", given: {}, unknown: null, unit: null, formula: null, answerText: compound, mystery: { compound } }) as never;
+const anyDesign = { id: "m1", template: "answer_balloons", templateReason: "r", params: {}, correctWhy: "The tests point to one compound.",
+  misconceptions: [mis("x1")], wrong: [{ misconceptionId: "zzz_unknown", wrongFormula: null, text: "a", why: "w" }, { misconceptionId: "x1", wrongFormula: null, text: "b", why: "w" }, { misconceptionId: "x1", wrongFormula: null, text: "c", why: "w" }] } as never;
+a = assemble(myst("KCl"), anyDesign);
+ok("mystery → mystery_sample, answer from code", a.question?.template === "mystery_sample" && a.question.answer.text === "potassium chloride (KCl)", a.errors);
+ok("mystery choices = code's distractors (designer's options ignored)", a.question?.choices.filter((c) => !c.correct).every((c) => / \(/.test(c.text) && c.misconceptionId !== "zzz_unknown") === true, a.question?.choices);
+ok("mystery lab: 5 tests, lilac flame", a.question?.mystery?.tests.length === 5 && a.question.mystery.tests[0].text === "Lilac flame");
+ok("mystery adds its mistakes to the registry", (a.added ?? []).length >= 2 && (a.added ?? []).every((m) => m.label.length > 0), a.added);
+a = assemble(myst("Unobtainium"), anyDesign);
+ok("unknown mystery compound rejected", !a.question && a.errors.some((e) => /isn't in the test table/.test(e)), a.errors);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

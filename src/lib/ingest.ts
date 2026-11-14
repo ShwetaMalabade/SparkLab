@@ -129,12 +129,13 @@ export async function ingest(
 
   // ---- code builds every question
   const built = new Map<string, TQuestion>();
+  const codeMis = new Map<string, M>(); // mistakes code itself names (Mystery Sample distractors), for the registry
   const failing = new Map<string, string[]>();
   const tryBuild = (id: string) => {
     const r = reads.get(id)!, d = designs.get(id);
     if (!d) { failing.set(id, [`${id}: no design for this question`]); return; }
     const out = assemble(r, d);
-    if (out.question) { built.set(id, out.question); failing.delete(id); }
+    if (out.question) { built.set(id, out.question); failing.delete(id); for (const m of out.added ?? []) codeMis.set(m.id, m); }
     else failing.set(id, out.errors);
   };
   await timed("verify", async () => {
@@ -181,6 +182,7 @@ export async function ingest(
   const worksheet = await timed("save", async () => {
     const mis = new Map<string, M>();
     for (const q of questions) for (const m of designs.get(q.id)?.misconceptions ?? []) if (!mis.has(m.id)) mis.set(m.id, m);
+    for (const m of codeMis.values()) if (!mis.has(m.id)) mis.set(m.id, m);
     const ws = await saveWorksheet(
       { id: newId("ws"), title: read.title, source: "upload", imageHash, questions, misconceptions: [...mis.values()] },
       dropped,

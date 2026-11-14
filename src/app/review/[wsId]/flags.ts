@@ -7,6 +7,8 @@ export function flagText(flag: string, q: TQuestion): string {
   if (key) return `Answer key says ${key[1]}${unit}. Code computes ${key[2]}${unit}. Using ${key[2]}${unit}.`;
   if (flag === "low_confidence_read") return "The AI wasn't sure it read this question correctly. Check the numbers.";
   if (flag === "template_fallback") return "Shown as answer balloons: the 3D lab couldn't honestly simulate this one.";
+  const ind = flag.match(/^indicator_mismatch:(\w+)$/);
+  if (ind) return `${ind[1].replace(/_/g, " ")} doesn't change color at this titration's end point. The lab still shows it; consider another indicator.`;
   if (flag.startsWith("critic_block")) return `Hidden by the reviewer: ${flag.split(":").slice(1).join(":").trim()}`;
   return flag;
 }
@@ -16,4 +18,6 @@ export const TEMPLATE: Record<TQuestion["template"], { icon: string; label: stri
   mix_lab: { icon: "🧪", label: "Mix Lab" },
   equation_balancer: { icon: "⚖️", label: "Equation Balancer" },
   answer_balloons: { icon: "🎈", label: "Answer Balloons" },
+  titration_lab: { icon: "💧", label: "Titration Lab" },
+  mystery_sample: { icon: "🔍", label: "Mystery Sample" },
 };
