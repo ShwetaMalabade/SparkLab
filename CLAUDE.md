@@ -8,7 +8,7 @@ You are a coding LLM on a **2-person HackPrinceton team** building **Homework Ar
 
 ## Current repo state
 
-The pre-tested code from `docs/plan/tested-code/` is in `src/lib`, `tests/` and `scripts/`, kept byte-identical to the reference. `src/lib/db.ts` is a no-op stub until the real Mongo version (P2-07). `src/lib/client/api.ts` currently runs **mock** behavior only: the fixture `data/fixtures/worksheet.json`, attempts in `localStorage["ha:attempts"]`, and `nextStep` = `fallbackNext`.
+The pre-tested code from `docs/plan/tested-code/` is in `src/lib`, `tests/` and `scripts/`, kept byte-identical to the reference. Storage goes through `db` from `src/lib/db.ts` (MongoDB, or `memoryDb.ts` when `OFFLINE=1`; both implement `Store` in `dbTypes.ts`). Every `_id` is a string we choose, and the store sets `createdAt`. `src/lib/client/api.ts` currently runs **mock** behavior only: the fixture `data/fixtures/worksheet.json`, attempts in `localStorage["ha:attempts"]`, and `nextStep` = `fallbackNext`.
 
 ## Commands
 

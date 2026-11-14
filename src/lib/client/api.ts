@@ -8,13 +8,13 @@
 import { Worksheet, type TWorksheet } from "@/lib/schema";
 import { fallbackNext, type Session } from "@/lib/agents/director";
 import fixtureJson from "../../../data/fixtures/worksheet.json";
+import { newClassCode } from "@/lib/classCode";
 import { getMode } from "./mode";
 import type { AttemptInput, IngestStep, NextStep } from "./types";
 
 export { getMode };
 export type { AttemptInput, IngestStep, NextStep, Mode } from "./types";
 
-const CLASS_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I/L
 const K = {
   classCode: "ha:classCode", // sessionStorage (set by Landing)
   attempts: "ha:attempts", // localStorage: AttemptInput & { attemptId }
@@ -48,7 +48,6 @@ function fixture(): TWorksheet {
   return (fixtureCache ??= Worksheet.parse(fixtureJson));
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const randomCode = () => Array.from({ length: 4 }, () => CLASS_CODE_ALPHABET[Math.floor(Math.random() * CLASS_CODE_ALPHABET.length)]).join("");
 
 // ---------- contract ----------
 
@@ -63,7 +62,7 @@ export function getClassCode(): string | null {
 
 export async function createClass(o?: { timeBudgetSec?: number; worksheetId?: string }): Promise<{ code: string }> {
   void o; // used by the real POST /api/class
-  const code = randomCode();
+  const code = newClassCode();
   try {
     if (typeof window !== "undefined") window.sessionStorage.setItem(K.classCode, code);
   } catch {
