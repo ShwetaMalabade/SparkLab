@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 14:45 · **Now working on:** P2-28 chemistry prompts + fixture (chemistry-only pivot) · **Branch:** main
+**Last updated:** Sat 15:30 · **Now working on:** — (chemistry labs: my side done; waiting for Dharm's go on README/Devpost rewrite) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - **Chemistry-only pivot (Dharm's call, Sat ~14:00):** 6 chemistry topics; 2 deep labs, **Titration Lab** and **Mystery Sample**. Contract added in ea3f6e9 (additive). Requests R-P2-1 / R-P2-2 below are the new 3D work. Physics templates stay in the code but leave the demo.
@@ -37,13 +37,13 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-25 | Ship | ⬜ | | |
 | P2-26 | Chemistry labs: chemistry code | ✅ | 519404f | Chemistry-only pivot (plan agreed with Dharm). acidBase.ts (titration pH by charge balance, end point, curve, indicator colors) + ions.ts (20 compounds × 5 tests, look-alike distractors). 52 textbook checks |
 | P2-27 | Chemistry labs: contract + assemble | ✅ | ea3f6e9 | Templates titration_lab / mystery_sample; optional titration/mystery on questions, titrationLog/testsUsed on attempts; code cross-checks the AI's titration formula (mole ratio). 66 checks in tests/chem-labs.test.ts |
-| P2-28 | Chemistry labs: prompts + chemistry fixture | ⬜ | | Chemistry-only reader/designer/coach; fixture with titration + mystery questions for Shweta |
+| P2-28 | Chemistry labs: prompts + chemistry fixture | ✅ | a0f46fe | Chemistry-only prompts with titration/mystery fields; fixture q1 titration · q2 mystery · q3 mix · q4 balancer · q5 stoichiometry. Real scan of a printed chemistry sheet: 3/3 in 10–14 s, all labs built, key typo 31→30.0 mL flagged. Coach titration variant verified by code (24.0 mL) |
 
 ## Requests to Shweta
 <!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · what you need · why · which task waits on it -->
 - [ ] R-P2-1 · **Titration Lab template** (`question.template === "titration_lab"`, data in `question.titration`, CONTRACTS §1): burette valve on the left hand (open hand = drip, keys Space/Shift), swirl on the right, live pH meter + curve drawing itself (`phAt` from `@/lib/acidBase`), flask color from `indicatorColor(indicator, pH)` (faint pink that fades → pink → deep magenta on overshoot), burette reading + notebook table; lock-in = the student's answer from the 4 choices; send `titrationLog`. · The chemistry showcase · Merge 3
 - [ ] R-P2-2 · **Mystery Sample template** (`"mystery_sample"`, data in `question.mystery`): bench with 5 tests (wire loop into the Bunsen flame → flame `color`; dropper tests → `Precipitate` with `color`, or `Bubbles` for `effect: "bubbles"`), clue board with each `text`, name the compound from the 4 choices, fewer tests = more stars; send `testsUsed`. Reuse the Mix Lab bench/flask. · Second deep lab · Merge 3
-- Until P2-28 lands, any question with these templates also works as answer balloons; the fixture with real lab questions is next.
+- **Fixture now has real lab questions (P2-28):** `/play/fixture` q1 = titration_lab (acetic acid 0.150 M × 20.0 mL vs NaOH 0.100 M, end point 30.0 mL, phenolphthalein, end pH 8.76), q2 = mystery_sample (KCl: lilac flame, white AgNO₃). Until your scenes exist they play as answer balloons.
 
 ## Answered requests (from Shweta)
 <!-- - R-P1-1 → done in <commit> -->
@@ -54,6 +54,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Fixture changed (P2-28):** q1 is now a titration and q2 a mystery (no more launcher/friction); q3 Mix Lab and q4 Balancer are identical (your 71 gesture tests pass), q5 is stoichiometry balloons. `/play/dev/variant` copies q1, so it now shows a titration variant.
 - **Real coach questions now arrive (b3f1ee4).** With the real model, a wrong answer usually gets a coach-written question: `origin: "variant"`, ids like `q1v1`, `q4v2`; it can be any template (seen: launcher and balancer). Your P1-15 badge path is the one that runs.
 - **Results page is real (P2-18).** Keep navigating to `/results/<sessionId>` after `endSession()`; it reads the server in live mode and this device's record in mock mode. "Play again" goes to `/play/<the wsId you played>`.
 - **Live mode is ready, still off by default.** `NEXT_PUBLIC_MOCK=0` (at build time) switches api.ts to the real routes. Signatures unchanged. `/play/fixture` still loads the fixture in live mode; a real scan's `/play/<wsId>` loads from the server. We flip it at Merge 1.
