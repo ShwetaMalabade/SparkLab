@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 15:30 · **Now working on:** — (chemistry labs: my side done; waiting for Dharm's go on README/Devpost rewrite) · **Branch:** main
+**Last updated:** Sat 15:04 · **Now working on:** — (chemistry labs: my side done; waiting for Dharm's go on README/Devpost rewrite) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - **Chemistry-only pivot (Dharm's call, Sat ~14:00):** 6 chemistry topics; 2 deep labs, **Titration Lab** and **Mystery Sample**. Contract added in ea3f6e9 (additive). Requests R-P2-1 / R-P2-2 below are the new 3D work. Physics templates stay in the code but leave the demo.
