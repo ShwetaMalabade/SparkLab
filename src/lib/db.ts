@@ -13,7 +13,9 @@ const g = globalThis as typeof globalThis & { __haMongo?: Promise<MongoDb> };
 async function connect(): Promise<MongoDb> {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGODB_URI is not set (set it in .env.local, or run with OFFLINE=1)");
-  const client = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000 });
+  // ignoreUndefined: without it the driver stores `undefined` fields as null, and optional
+  // (non-nullable) schema fields like params.decoys would then fail validation on load.
+  const client = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000, ignoreUndefined: true });
   await client.connect();
   const mdb = client.db(process.env.MONGODB_DB ?? "homework_arena");
   await Promise.all([

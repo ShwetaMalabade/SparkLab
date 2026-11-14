@@ -166,6 +166,7 @@ export async function ingest(
     const ws = await saveWorksheet(
       { id: newId("ws"), title: read.title, source: "upload", imageHash, questions, misconceptions: [...mis.values()] },
       dropped,
+      Object.fromEntries(questions.map((q) => [q.id, { read: reads.get(q.id)!, design: designs.get(q.id)! }])),
     );
     const linked = await db.update("classes", { _id: input.classCode }, { $set: { worksheetId: ws.id } });
     // Critic (Agent 3) is CUT. Classmates (Agent 5, P2-20) will be started here in the background if Merge 2 is green.

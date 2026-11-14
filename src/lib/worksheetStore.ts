@@ -2,13 +2,17 @@
 // In the database the worksheet's id is the document _id and createdAt is a real Date (set by the store);
 // the contract type TWorksheet uses `id` and an ISO string, so convert at this one boundary.
 import { db, type Doc } from "./db";
-import { Worksheet, type TWorksheet } from "./schema";
+import type { z } from "zod";
+import { Worksheet, type DesignQuestion, type ReadQuestion, type TWorksheet } from "./schema";
 
-type WorksheetDoc = Doc & Omit<TWorksheet, "id" | "createdAt"> & { dropped?: string[] };
+/** The agent drafts behind each question, kept so a Review edit can re-run assemble() with no AI call. */
+export type Drafts = Record<string, { read: z.infer<typeof ReadQuestion>; design: z.infer<typeof DesignQuestion> }>;
 
-export async function saveWorksheet(ws: Omit<TWorksheet, "createdAt">, dropped: string[] = []): Promise<TWorksheet> {
+type WorksheetDoc = Doc & Omit<TWorksheet, "id" | "createdAt"> & { dropped?: string[]; drafts?: Drafts };
+
+export async function saveWorksheet(ws: Omit<TWorksheet, "createdAt">, dropped: string[] = [], drafts: Drafts = {}): Promise<TWorksheet> {
   const { id, ...rest } = ws;
-  await db.insert("worksheets", { ...rest, _id: id, dropped });
+  await db.insert("worksheets", { ...rest, _id: id, dropped, drafts });
   const saved = await loadWorksheet(id);
   if (!saved) throw new Error(`worksheet ${id} vanished after insert`);
   return saved;
@@ -24,8 +28,16 @@ export async function loadDropped(id: string): Promise<string[]> {
   return (await db.findOne<WorksheetDoc>("worksheets", { _id: id }))?.dropped ?? [];
 }
 
-export async function replaceQuestions(id: string, questions: TWorksheet["questions"]): Promise<void> {
-  await db.update("worksheets", { _id: id }, { $set: { questions } });
+export async function loadDrafts(id: string): Promise<Drafts> {
+  return (await db.findOne<WorksheetDoc>("worksheets", { _id: id }))?.drafts ?? {};
+}
+
+export async function replaceQuestion(id: string, question: TWorksheet["questions"][number], draft: Drafts[string]): Promise<void> {
+  const doc = await db.findOne<WorksheetDoc>("worksheets", { _id: id });
+  if (!doc) return;
+  const questions = doc.questions.map((q) => (q.id === question.id ? question : q));
+  // Whole-object $set (no dotted paths) so MongoDB and the memory store behave identically.
+  await db.update("worksheets", { _id: id }, { $set: { questions, drafts: { ...doc.drafts, [question.id]: draft } } });
 }
 
 function toWorksheet(doc: WorksheetDoc): TWorksheet {
