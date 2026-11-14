@@ -2,10 +2,10 @@
 // Server-only. The MongoClient is cached on globalThis: Atlas Free has a connection cap and
 // Next.js reloads/serverless instances would otherwise open a new pool each time.
 import { MongoClient, MongoServerError, type Db as MongoDb } from "mongodb";
-import { DuplicateIdError, newId, type Collection, type Doc, type FindOptions, type Filter, type Store, type Update } from "./dbTypes";
+import { DuplicateIdError, newId, type ClassFacet, type Collection, type Doc, type FindOptions, type Filter, type Store, type Update } from "./dbTypes";
 import { memoryDb } from "./memoryDb";
 
-export type { AiCallLog, Collection, Doc, Filter, Store, Update } from "./dbTypes";
+export type { AiCallLog, ClassFacet, Collection, Doc, Filter, FirstAttempt, Store, Update } from "./dbTypes";
 export { DuplicateIdError, newId } from "./dbTypes";
 
 const g = globalThis as typeof globalThis & { __haMongo?: Promise<MongoDb> };
@@ -67,6 +67,45 @@ export const mongoDb: Store = {
     if (update.$push) u.$push = update.$push;
     const r = await (await col(coll)).updateOne(filter, u);
     return r.matchedCount;
+  },
+
+  // docs/plan/06 §4: one round trip. Sort by time, keep each student's FIRST attempt per question, then facet.
+  async aggregateClass(code) {
+    const [out] = await (await col("attempts"))
+      .aggregate<ClassFacet>([
+        { $match: { classCode: code } },
+        { $sort: { createdAt: 1 } },
+        {
+          $group: {
+            _id: { s: "$sessionId", q: "$questionId" },
+            origin: { $first: "$questionOrigin" },
+            correct: { $first: "$correct" },
+            misconceptionId: { $first: "$misconceptionId" },
+            chosenText: { $first: "$chosenText" },
+            simulated: { $first: "$simulated" },
+            at: { $first: "$createdAt" },
+          },
+        },
+        {
+          $facet: {
+            perQuestion: [
+              { $match: { origin: "worksheet" } },
+              { $group: { _id: "$_id.q", n: { $sum: 1 }, right: { $sum: { $cond: ["$correct", 1, 0] } } } },
+            ],
+            perStudent: [{ $group: { _id: "$_id.s", answers: { $push: { q: "$_id.q", origin: "$origin", correct: "$correct" } } } }],
+            mistakes: [
+              { $match: { misconceptionId: { $ne: null } } },
+              { $group: { _id: "$misconceptionId", students: { $addToSet: "$_id.s" } } },
+              { $project: { students: 1, n: { $size: "$students" } } },
+              { $sort: { n: -1, _id: 1 } },
+              { $limit: 3 },
+            ],
+            latest: [{ $sort: { at: -1 } }, { $limit: 5 }],
+          },
+        },
+      ])
+      .toArray();
+    return out ?? { perQuestion: [], perStudent: [], mistakes: [], latest: [] };
   },
 
   async log(entry) {

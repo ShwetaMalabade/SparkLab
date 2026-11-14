@@ -1,6 +1,6 @@
 // src/lib/memoryDb.ts — in-memory store for offline mode (OFFLINE=1). Same interface as MongoDB.
 // Kept on globalThis so dev-server reloads don't wipe it. Returns copies, like a real database would.
-import { DuplicateIdError, newId, type Collection, type Doc, type FindOptions, type Filter, type Store, type Update } from "./dbTypes";
+import { DuplicateIdError, newId, type ClassFacet, type Collection, type Doc, type FindOptions, type Filter, type FirstAttempt, type Store, type Update } from "./dbTypes";
 
 type Tables = Record<Collection, Doc[]>;
 const g = globalThis as typeof globalThis & { __haMemoryDb?: Tables };
@@ -44,6 +44,49 @@ export const memoryDb: Store = {
     for (const [k, v] of Object.entries(update.$set ?? {})) d[k] = copy(v);
     for (const [k, v] of Object.entries(update.$push ?? {})) d[k] = [...((d[k] as unknown[]) ?? []), copy(v)];
     return 1;
+  },
+
+  // Same result as the MongoDB $facet pipeline in db.ts, in plain JS.
+  async aggregateClass(code) {
+    const rows = tables().attempts
+      .filter((a) => a.classCode === code)
+      .sort((a, b) => +a.createdAt - +b.createdAt);
+    const first = new Map<string, FirstAttempt>();
+    for (const a of rows) {
+      const key = `${a.sessionId}|${a.questionId}`;
+      if (!first.has(key))
+        first.set(key, {
+          _id: { s: a.sessionId as string, q: a.questionId as string },
+          origin: a.questionOrigin as FirstAttempt["origin"],
+          correct: a.correct as boolean,
+          misconceptionId: (a.misconceptionId as string | null) ?? null,
+          chosenText: a.chosenText as string,
+          simulated: !!a.simulated,
+          at: a.createdAt,
+        });
+    }
+    const all = [...first.values()];
+    const perQuestion = new Map<string, { _id: string; n: number; right: number }>();
+    for (const f of all.filter((x) => x.origin === "worksheet")) {
+      const r = perQuestion.get(f._id.q) ?? { _id: f._id.q, n: 0, right: 0 };
+      r.n++;
+      if (f.correct) r.right++;
+      perQuestion.set(f._id.q, r);
+    }
+    const perStudent = new Map<string, ClassFacet["perStudent"][number]>();
+    for (const f of all) {
+      const r = perStudent.get(f._id.s) ?? { _id: f._id.s, answers: [] };
+      r.answers.push({ q: f._id.q, origin: f.origin, correct: f.correct });
+      perStudent.set(f._id.s, r);
+    }
+    const mis = new Map<string, Set<string>>();
+    for (const f of all) if (f.misconceptionId) mis.set(f.misconceptionId, (mis.get(f.misconceptionId) ?? new Set()).add(f._id.s));
+    const mistakes = [...mis]
+      .map(([id, set]) => ({ _id: id, students: [...set], n: set.size }))
+      .sort((a, b) => b.n - a.n || (a._id < b._id ? -1 : a._id > b._id ? 1 : 0)) // same tie-break as Mongo
+      .slice(0, 3);
+    const latest = [...all].sort((a, b) => +b.at - +a.at).slice(0, 5);
+    return copy({ perQuestion: [...perQuestion.values()], perStudent: [...perStudent.values()], mistakes, latest });
   },
 
   async log(entry) {

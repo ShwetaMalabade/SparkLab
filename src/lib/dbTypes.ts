@@ -27,6 +27,23 @@ export type AiCallLog = {
   reason?: string | null;
 };
 
+/** First attempt per student per question, grouped four ways (docs/plan/06 §4). */
+export type FirstAttempt = {
+  _id: { s: string; q: string };
+  origin: "worksheet" | "variant";
+  correct: boolean;
+  misconceptionId: string | null;
+  chosenText: string;
+  simulated: boolean;
+  at: Date;
+};
+export type ClassFacet = {
+  perQuestion: { _id: string; n: number; right: number }[]; // worksheet questions only
+  perStudent: { _id: string; answers: { q: string; origin: "worksheet" | "variant"; correct: boolean }[] }[];
+  mistakes: { _id: string; students: string[]; n: number }[]; // top 3 by number of students
+  latest: FirstAttempt[]; // newest first, max 5
+};
+
 export interface Store {
   /** Inserts and returns the _id (generated with `prefix` if the doc has none). */
   insert(coll: Collection, doc: Record<string, unknown> & { _id?: string }, prefix?: string): Promise<string>;
@@ -34,6 +51,8 @@ export interface Store {
   findOne<T extends Doc = Doc>(coll: Collection, filter: Filter): Promise<T | null>;
   /** Updates the first match; returns how many matched (0 or 1). */
   update(coll: Collection, filter: Filter, update: Update): Promise<number>;
+  /** The live view's numbers for one class, in one round trip. */
+  aggregateClass(code: string): Promise<ClassFacet>;
   /** One row in aiCalls per AI call (powers the AI trace and the offline replay). Never throws. */
   log(entry: AiCallLog): Promise<void>;
 }
