@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 02:15 · **Now working on:** P2-04 · **Branch:** main
+**Last updated:** Sat 02:15 · **Now working on:** — (P2-04 next, waiting for Dharm's go) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -10,7 +10,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 ## Tasks
 | ID | Task | Status | Commit | Note (1 line) |
 |---|---|---|---|---|
-| P2-01 | Repo + scaffold | ✅ | 4bfdc3a | Next 16.4 + Tailwind v4 (no tailwind.config; tokens go in globals.css @theme). Build + lint green. Not pushed yet (no GitHub remote) |
+| P2-01 | Repo + scaffold | ✅ | 4bfdc3a | Next 16.4 + Tailwind v4 (no tailwind.config; tokens go in globals.css @theme). Build + lint green. Pushed to github.com/ShwetaMalabade/SparkLab `main` |
 | P2-02 | Design tokens + layout | ✅ | b16219d | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
 | P2-03 | Paste the tested code | ✅ | 99f2adc | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ⬜ | | |
@@ -48,6 +48,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - (none)
 
 ## Notes for the partner
+- **Repo is live: https://github.com/ShwetaMalabade/SparkLab** (`main`). Scaffold + tokens + tested code are in → **P1-01 is unblocked**. P1-09 still waits on P2-04 (api mock + fixture).
 - Scaffold is **Next.js 16.4** (not 15). Read `node_modules/next/dist/docs/` before Next-specific code; `cacheComponents: true` is on. Empty `.gitkeep` folders exist for all your paths.
 
 ## Merge log
