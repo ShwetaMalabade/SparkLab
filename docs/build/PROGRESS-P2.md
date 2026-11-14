@@ -14,7 +14,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-02 | Design tokens + layout | ✅ | 2d04bbf | Tokens in globals.css @theme (bg-cyan, text-muted, bg-panel…); Space Grotesk + Inter; mode pill reads getMode() from src/lib/client/mode.ts |
 | P2-03 | Paste the tested code | ✅ | 4abe446 | 86/86 PASS lines (verify's own summary prints "55 passed": its 8 regression checks log separately). db.ts = no-op stub until P2-07 |
 | P2-04 | Contracts + fixture + mocks | ✅ | 5407174 | api.ts + types.ts exactly as CONTRACTS §2, mock mode; fixture q1 launcher · q2 balloons · q3 mix lab · q4 balancer; speak.ts; results stub |
-| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Waiting on Dharm: AI Studio keys + model names + real RPM/RPD, Atlas cluster, Vercel project + env vars |
+| P2-05 | Accounts + quota | ⛔ | 080fcad | Code done (scripts/test-ai.ts). Atlas cluster ✓ (connects in <1 s, round trip + $facet ok). Still waiting on Dharm: AI Studio key + model names + real RPM/RPD, Vercel env vars |
 | P2-06 | Business + demo worksheet | ⛔ | 4ecb6bf | Drafts in PERI.md. Waiting on Dharm: contact 3 targets, get a real worksheet, print ×3 with the 34.0 key typo |
 | P2-07 | Database | ✅ | 0809611 | db.ts (Mongo, cached client, indexes) + memoryDb.ts (OFFLINE=1), same Store interface; classCode.ts. 32 checks vs local Mongo + memory. aggregateClass comes with P2-15 |
 | P2-08 | Agents 1 + 2 | 🟦 | 108515b | prompts.ts (verbatim from 03 §4) + reader.ts + designer.ts done. Still to do: test the prompts on 3 real worksheet photos (needs a Gemini key) |
@@ -28,7 +28,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-16 | Live phone page `/live/[code]` | 🟦 | 61cc03a | Polls 2 s, no toasts on first load, toast + vibrate for real answers only (0.8 s locally), grid/mistakes/bars/coach feed. Done-when needs a deploy: real phone on venue Wi-Fi + cellular |
 | P2-17 | Teacher insight | ✅ | 15421cf | insight.ts + POST /api/class/[code]/insights + phone card "✓ numbers checked". numbersAllowed on bullets, nextMove and groups; unknown nicknames dropped; cache 20 s (longer if the class is unchanged). 21 scripted checks. Real-model wording check needs a key |
 | P2-18 | Results page | ✅ | 23aa53c | Score (first answer per question), accuracy by topic, top mistake + why, time played, coach note + its questions, Play again. GET /api/session/[id]/results; mock/offline-network → this device's record. 19 checks + Chrome (mock) |
-| P2-19 | TTL indexes | 🟦 | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"); conflict → warning, not a crash. 6 checks vs a fake Mongo; confirm on Atlas once MONGODB_URI is set |
+| P2-19 | TTL indexes | ✅ | dd7ab13 | 24 h TTL on createdAt for classes, sessions, attempts, aiCalls (worksheets kept for "Use last scan"). Confirmed on Atlas: all 4 TTL indexes + the query indexes exist |
 | P2-20 | Classmates | ⬜ | | |
 | P2-21 | Peri + domain | ⬜ | | |
 | P2-22 | Offline mode | ⬜ | | |
