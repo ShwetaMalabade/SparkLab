@@ -26,10 +26,16 @@ type SessionDoc = Doc & {
   skipped?: string[];
 };
 
-export type CoachDeps = { ask: (prompt: string, ctx: { sessionId: string; classCode: string }) => Promise<AskResult<TDirectorOut>> };
+export type CoachDeps = { ask: (prompt: string, ctx: { sessionId: string; classCode: string; after?: string }) => Promise<AskResult<TDirectorOut>> };
 const realCoach: CoachDeps = {
-  ask: (prompt, ctx) => askJSON("director", DirectorOut, prompt, { ctx: { ...ctx, reason: "next" } }) as Promise<AskResult<TDirectorOut>>,
+  // reason records which answer this call followed ("next after q2/C/0", or "next first"): the replay export
+  // pairs each recorded decision with its answer this way (scripts/export-replay.ts).
+  ask: (prompt, { after, ...ctx }) =>
+    askJSON("director", DirectorOut, prompt, { ctx: { ...ctx, reason: `next ${after ?? "first"}` } }) as Promise<AskResult<TDirectorOut>>,
 };
+/** "after q2/C/0" = question q2, choice C, wrong. Parsed back by scripts/export-replay.ts. */
+export const afterTag = (a: { questionId: string; chosen: string; correct: boolean } | null) =>
+  a ? `after ${a.questionId}/${a.chosen}/${a.correct ? 1 : 0}` : "first";
 
 export type CoachResult = { ok: true; step: NextStep & { ms: number } } | { ok: false; status: number; error: string };
 
@@ -67,7 +73,7 @@ export async function decideNext(
 
   // ---- ask the coach
   const ctx = buildContext(ws, s, session, attempts, last, now);
-  let r = await deps.ask(DIRECTOR_PROMPT(JSON.stringify(ctx)), { sessionId: s._id, classCode: s.classCode });
+  let r = await deps.ask(DIRECTOR_PROMPT(JSON.stringify(ctx)), { sessionId: s._id, classCode: s.classCode, after: afterTag(last) });
   // Offline: the exact prompt (it includes the seconds left) rarely matches the recording, so reuse the recorded
   // decision for the same answer. It goes through the same code checks below; no match → the code fallback.
   if (!r.ok && process.env.OFFLINE === "1") {
