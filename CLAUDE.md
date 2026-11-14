@@ -8,7 +8,7 @@ You are a coding LLM on a **2-person HackPrinceton team** building **Homework Ar
 
 ## Current repo state
 
-The pre-tested code from `docs/plan/tested-code/` is in `src/lib`, `tests/` and `scripts/`, kept byte-identical to the reference. Storage goes through `db` from `src/lib/db.ts` (MongoDB, or `memoryDb.ts` when `OFFLINE=1`; both implement `Store` in `dbTypes.ts`). Every `_id` is a string we choose, and the store sets `createdAt`. `src/lib/client/api.ts` currently runs **mock** behavior only: the fixture `data/fixtures/worksheet.json`, attempts in `localStorage["ha:attempts"]`, and `nextStep` = `fallbackNext`.
+The pre-tested code from `docs/plan/tested-code/` is in `src/lib`, `tests/` and `scripts/`, kept byte-identical to the reference. Storage goes through `db` from `src/lib/db.ts` (MongoDB, or `memoryDb.ts` when `OFFLINE=1`; both implement `Store` in `dbTypes.ts`). Every `_id` is a string we choose, and the store sets `createdAt`. `src/lib/client/api.ts` has two paths. **Mock** (the default) runs entirely in the browser: the fixture `data/fixtures/worksheet.json`, attempts in `localStorage["ha:attempts"]`, and `nextStep` = `fallbackNext`. **Live** (`NEXT_PUBLIC_MOCK=0`) and **offline** use the real API routes. `postAttempt` queues answers and retries every 5 s, and `nextStep` aborts at 6 s and falls back in the browser.
 
 ## Commands
 
