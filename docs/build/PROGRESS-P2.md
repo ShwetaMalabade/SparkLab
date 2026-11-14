@@ -2,10 +2,10 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 13:51 · **Now working on:** — (API + Mongo verified live; waiting for Dharm: replay recording, backup video, quota numbers, Vercel) · **Branch:** main
+**Last updated:** Sat 14:45 · **Now working on:** P2-28 chemistry prompts + fixture (chemistry-only pivot) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
-- (none)
+- **Chemistry-only pivot (Dharm's call, Sat ~14:00):** 6 chemistry topics; 2 deep labs, **Titration Lab** and **Mystery Sample**. Contract added in ea3f6e9 (additive). Requests R-P2-1 / R-P2-2 below are the new 3D work. Physics templates stay in the code but leave the demo.
 
 ## Tasks
 | ID | Task | Status | Commit | Note (1 line) |
@@ -35,16 +35,22 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-23 | Record a replay | 🟦 | afb0a2a | scripts/export-replay.ts <CLASS> → data/replay/aiCalls.json + seed.json; 14 round-trip checks (live run → export → offline coach follows it). Still to do: play one demo in live mode, export, Wi-Fi-off test (needs Atlas network access fixed) |
 | P2-24 | Backup video + Devpost draft | 🟦 | ff27ff5 | DEVPOST.md drafted from 10 §4, "4 AI agents + code checks", only built features claimed; [TODO]s for links/GIFs/Peri. Still to do by Dharm: record the 2-min backup video (11 §2) |
 | P2-25 | Ship | ⬜ | | |
+| P2-26 | Chemistry labs: chemistry code | ✅ | 519404f | Chemistry-only pivot (plan agreed with Dharm). acidBase.ts (titration pH by charge balance, end point, curve, indicator colors) + ions.ts (20 compounds × 5 tests, look-alike distractors). 52 textbook checks |
+| P2-27 | Chemistry labs: contract + assemble | ✅ | ea3f6e9 | Templates titration_lab / mystery_sample; optional titration/mystery on questions, titrationLog/testsUsed on attempts; code cross-checks the AI's titration formula (mole ratio). 66 checks in tests/chem-labs.test.ts |
+| P2-28 | Chemistry labs: prompts + chemistry fixture | ⬜ | | Chemistry-only reader/designer/coach; fixture with titration + mystery questions for Shweta |
 
 ## Requests to Shweta
 <!-- Things you need changed in THEIR files. Format: - [ ] R-P2-1 · what you need · why · which task waits on it -->
-- (none)
+- [ ] R-P2-1 · **Titration Lab template** (`question.template === "titration_lab"`, data in `question.titration`, CONTRACTS §1): burette valve on the left hand (open hand = drip, keys Space/Shift), swirl on the right, live pH meter + curve drawing itself (`phAt` from `@/lib/acidBase`), flask color from `indicatorColor(indicator, pH)` (faint pink that fades → pink → deep magenta on overshoot), burette reading + notebook table; lock-in = the student's answer from the 4 choices; send `titrationLog`. · The chemistry showcase · Merge 3
+- [ ] R-P2-2 · **Mystery Sample template** (`"mystery_sample"`, data in `question.mystery`): bench with 5 tests (wire loop into the Bunsen flame → flame `color`; dropper tests → `Precipitate` with `color`, or `Bubbles` for `effect: "bubbles"`), clue board with each `text`, name the compound from the 4 choices, fewer tests = more stars; send `testsUsed`. Reuse the Mix Lab bench/flask. · Second deep lab · Merge 3
+- Until P2-28 lands, any question with these templates also works as answer balloons; the fixture with real lab questions is next.
 
 ## Answered requests (from Shweta)
 <!-- - R-P1-1 → done in <commit> -->
 - (none)
 
 ## Contract changes (schema.ts / api.ts) — additive only
+- **ea3f6e9 (additive):** Template += `titration_lab`, `mystery_sample`; `TQuestion.titration?` / `TQuestion.mystery?` (optional, nullable); `Attempt.titrationLog?` / `Attempt.testsUsed?` (optional). New importable helpers: `@/lib/acidBase` (`phAt`, `indicatorColor`, `INDICATORS`), `@/lib/ions` (`TESTS`). Details in CONTRACTS §1, §4, §6. Nothing existing changed.
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
