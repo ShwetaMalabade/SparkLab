@@ -2,7 +2,7 @@
 **Written ONLY by Dharm's LLM.** Shweta's LLM reads this at the start of every task.
 Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 
-**Last updated:** Sat 03:20 · **Now working on:** P2-16 · **Branch:** main
+**Last updated:** Sat 04:10 · **Now working on:** — (Phase 2 code done; waiting for Dharm's go. Still by hand: keys/accounts/deploy for the real-model and real-phone checks) · **Branch:** main
 
 ## ⚠️ Alerts (top-priority things the partner or Dharm must see)
 - (none)
@@ -25,7 +25,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | P2-13 | Real `nextStep` in `api.ts` | ✅ | f157cd0 | All api.ts calls have a live path (NEXT_PUBLIC_MOCK=0); nextStep 6 s abort → browser fallback; postAttempt queue + 5 s retry. 19 live checks |
 | P2-14 | Review page | ✅ | 6bc7a64 | /review/[wsId]: cards, plain-words flags, AI-named mistakes, edit → code recompute (PATCH), remove (PATCH remove:true). Scan + Use last scan now go here. Checked in Chrome |
 | P2-15 | Class stats `GET /api/class/[code]` | ✅ | ed3f5d9 | ClassStats via $facet (Mongo) / JS (memory), first attempt per student per question; coachFeed from decision rows. 15 checks per store + identical output |
-| P2-16 | Live phone page `/live/[code]` | ⬜ | | |
+| P2-16 | Live phone page `/live/[code]` | 🟦 | 61cc03a | Polls 2 s, no toasts on first load, toast + vibrate for real answers only (0.8 s locally), grid/mistakes/bars/coach feed. Done-when needs a deploy: real phone on venue Wi-Fi + cellular |
 | P2-17 | Teacher insight | ⬜ | | |
 | P2-18 | Results page | ⬜ | | |
 | P2-19 | TTL indexes | ⬜ | | |
