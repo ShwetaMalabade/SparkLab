@@ -196,6 +196,8 @@ function buildContext(ws: TWorksheet, s: SessionDoc, session: Session, attempts:
           experiments: last.experiments,
           mixTries: last.mixTries,
           balancerSteps: last.balancerSteps,
+          titrationLog: last.titrationLog ?? null,
+          testsUsed: last.testsUsed ?? null,
         }
       : null,
   };

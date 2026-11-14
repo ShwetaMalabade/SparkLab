@@ -2,6 +2,7 @@
 import { analyteMolarityFrom, checkScenario, curve, equivalenceML, indicatorColor, indicatorFits, lookupAcidBase, phAt, type Scenario } from "../src/lib/acidBase";
 import { COMPOUNDS, lookupCompound, mysteryDistractors, observe, observeAll } from "../src/lib/ions";
 import { assemble } from "../src/lib/assemble";
+import { LenientReadOut } from "../src/lib/agents/reader";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra: unknown = "") => {
@@ -132,6 +133,18 @@ a = assemble(conc, { ...(titrDesign as object), id: "t2", wrong: [
   { misconceptionId: "inverted_ratio", wrongFormula: "Vt/(Mt*Va)", text: null, why: "w" },
   { misconceptionId: "doubled_volume", wrongFormula: "2*Mt*Vt/Va", text: null, why: "w" }] } as never);
 ok("find-the-concentration titration → 0.0856 M, lab ask = analyte_molarity", a.question?.titration?.ask === "analyte_molarity" && Math.abs((a.question.answer.value ?? 0) - 0.0856) < 1e-6 && a.question.titration.equivalenceML === 21.4, a.errors);
+
+a = assemble(titr({ titration: { analyte: { formula: "HCl", name: "hydrochloric acid", volumeML: 25, molarity: 0.1 }, titrant: { formula: "NaOH", name: "sodium hydroxide", molarity: 0.1 }, indicator: "phenolphthalein", endpointML: 31 } }), titrDesign);
+ok("answer key's volume copied into endpointML is ignored when the answer is in mL (real read, 2026-11-14)", a.question?.titration?.ask === "endpoint_ml" && a.question.answer.value === 25, a.errors);
+
+// ---- reader output tidy-up (real reads had concepts over 60 chars)
+const rq = (o: Record<string, unknown>) => ({ ...base, id: "q1", topic: "stoichiometry", concept: "c", prompt: "p", given: {}, unknown: null, unit: null, formula: null, answerText: "x", ...o });
+let lr = LenientReadOut.safeParse({ title: "T", questions: [rq({ concept: "x".repeat(75) }), rq({ id: "q2" })] });
+ok("over-long concept trimmed to 60, page kept", lr.success && lr.data.questions[0].concept.length === 60 && lr.data.questions.length === 2);
+lr = LenientReadOut.safeParse({ title: "T", questions: [rq({ id: "q1", confidence: 7 }), rq({ id: "q2" })] });
+ok("one broken question left out, the rest kept", lr.success && lr.data.questions.length === 1 && lr.data.questions[0].id === "q2");
+lr = LenientReadOut.safeParse({ title: "T", questions: [rq({ confidence: 7 })] });
+ok("all broken → real errors come back for repair", !lr.success);
 
 const myst = (compound: string) => ({ ...base, id: "m1", topic: "other_chemistry", concept: "identify ions", prompt: "Identify the white solid.", given: {}, unknown: null, unit: null, formula: null, answerText: compound, mystery: { compound } }) as never;
 const anyDesign = { id: "m1", template: "answer_balloons", templateReason: "r", params: {}, correctWhy: "The tests point to one compound.",

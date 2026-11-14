@@ -51,13 +51,15 @@ export function buildTitration(r: R, answer: number | null): { lab?: TTitrationL
   // The numbers in "given" win (Ma, Va, Mt, Vt): a Review edit or a coach variant changes those, and the lab must follow.
   const g = (k: string) => (r.given[k] ? r.given[k].value : undefined);
   const t0 = r.titration!;
+  // What's being asked comes from the answer's unit, not from which fields are filled: real reads copied the answer
+  // key's volume into endpointML even when the question asks for that volume.
+  const ask = UNIT_M.test(r.unit ?? "") ? "analyte_molarity" : "endpoint_ml";
   const t = {
     ...t0,
-    analyte: { ...t0.analyte, volumeML: g("Va") ?? t0.analyte.volumeML, molarity: t0.endpointML != null ? null : (g("Ma") ?? t0.analyte.molarity) },
+    analyte: { ...t0.analyte, volumeML: g("Va") ?? t0.analyte.volumeML, molarity: ask === "analyte_molarity" ? null : (g("Ma") ?? t0.analyte.molarity) },
     titrant: { ...t0.titrant, molarity: g("Mt") ?? t0.titrant.molarity },
-    endpointML: t0.endpointML != null ? (g("Vt") ?? t0.endpointML) : null,
+    endpointML: ask === "analyte_molarity" ? (g("Vt") ?? t0.endpointML) : null,
   };
-  const ask = t.endpointML != null ? "analyte_molarity" : "endpoint_ml";
   let molarity = t.analyte.molarity;
   if (ask === "analyte_molarity") {
     try { molarity = analyteMolarityFrom({ analyte: t.analyte, titrant: t.titrant }, t.endpointML!); } catch { molarity = null; }
