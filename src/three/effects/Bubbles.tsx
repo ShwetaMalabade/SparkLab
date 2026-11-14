@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { InstancedMesh, Object3D } from "three";
 import { rng } from "./rng";
+import { particles, useQuality } from "../quality";
 
 /** Bottom centre of the liquid + its radius and height, in world units. */
 export type Place = { origin: [number, number, number]; radius: number; height: number };
@@ -15,7 +16,8 @@ const dummy = new Object3D();
 
 export function Bubbles({ at, active, count = 160, color = "#E0F2FE" }: BubblesProps) {
   const mesh = useRef<InstancedMesh>(null);
-  const n = Math.min(200, count);
+  const quality = useQuality((q) => q.level);
+  const n = particles(Math.min(200, count), quality); // P1-20: halved when the arena is slow
   // Normalised units: d = fraction of the radius, y = fraction of the height.
   const parts = useMemo(() => {
     const r = rng(11);

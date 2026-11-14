@@ -1,4 +1,5 @@
 "use client";
+import { useQuality } from "@/three/quality";
 // src/motion/DebugOverlay.tsx: toggled by D (docs/plan/04 §8). Landmarks + bones, reach box, sw / swFrac,
 // θ (forearm and full arm side by side), power p, steady timer, fps, last 5 events with timestamps.
 import { useEffect, useRef, useState } from "react";
@@ -47,7 +48,8 @@ function DebugPanel() {
       <canvas ref={canvasRef} width={320} height={240} className="mb-2 w-full rounded-md bg-panel" />
       {stats ? (
         <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-          <span>fps {stats.fps}</span>
+          <span>pose fps {stats.fps}</span>
+          <RenderFps />
           <span className={stats.tracking ? "text-lime" : "text-coral"}>{stats.tracking ? "✓ tracking" : "✗ lost"}</span>
           <span>sw {stats.sw.toFixed(0)} px</span>
           <span>swFrac {stats.swFrac.toFixed(3)}</span>
@@ -119,4 +121,15 @@ function drawDebug(canvas: HTMLCanvasElement | null, f: MotionFrame) {
     ctx.arc(X(p.x), Y(p.y), i >= 11 && i <= 16 ? 3.5 : 2, 0, Math.PI * 2);
     ctx.fill();
   });
+}
+
+/** 3D render fps + the auto quality level (P1-20). Target ≥ 30 with pose running. */
+function RenderFps() {
+  const fps = useQuality((q) => q.renderFps);
+  const level = useQuality((q) => q.level);
+  return (
+    <span className={fps && fps < 30 ? "text-coral" : "text-lime"}>
+      3D fps {fps || "–"} · quality {level === 0 ? "full" : `-${level}`}
+    </span>
+  );
 }

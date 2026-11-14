@@ -6,6 +6,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSettings } from "@/game/settings";
 import { Color, InstancedMesh, Object3D, Vector3 } from "three";
 import { rng } from "./rng";
+import { particles, useQuality } from "../quality";
 
 export type BurstProps = {
   position: [number, number, number];
@@ -20,7 +21,8 @@ export function Burst({ position, colors, count = 90, speed: fullSpeed = 3.2, li
   const mesh = useRef<InstancedMesh>(null);
   // Reduced motion: a small, gentle burst instead of a big one (read once per mount).
   const [reduced] = useState(() => useSettings.getState().reducedMotion);
-  const n = Math.min(300, reduced ? Math.ceil(count / 4) : count);
+  const [level] = useState(() => useQuality.getState().level);
+  const n = particles(Math.min(300, reduced ? Math.ceil(count / 4) : count), level);
   const speed = reduced ? fullSpeed * 0.4 : fullSpeed;
   const parts = useMemo(
     () => {

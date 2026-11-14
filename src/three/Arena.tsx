@@ -7,6 +7,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { Suspense, useRef, type ReactNode } from "react";
 import type { PerspectiveCamera } from "three";
+import { FpsProbe } from "./FpsMeter";
+import { reportFps, useQuality } from "./quality";
 
 export const NAVY = "#0B1020";
 export const CAMERA_POS: [number, number, number] = [0, 1.6, 7];
@@ -23,6 +25,7 @@ export type ArenaProps = {
 };
 
 export function Arena({ children, accent = "#22D3EE", still = false, bloom = 0.8, className = "" }: ArenaProps) {
+  const level = useQuality((q) => q.level); // P1-20: steps down by itself if the render loop stays under 30 fps
   return (
     <div className={`absolute inset-0 h-full w-full ${className}`}>
       <Canvas
@@ -39,12 +42,15 @@ export function Arena({ children, accent = "#22D3EE", still = false, bloom = 0.8
         <CameraSway still={still} />
         <Floor accent={accent} />
         <ContactShadows position={[0, 0.001, 0]} opacity={0.55} scale={14} blur={2.4} far={4} resolution={512} color="#000000" />
-        <Suspense fallback={null}>
-          <StudioEnvironment accent={accent} />
-        </Suspense>
+        {level < 2 && (
+          <Suspense fallback={null}>
+            <StudioEnvironment accent={accent} />
+          </Suspense>
+        )}
+        <FpsProbe onFps={reportFps} />
         {children}
         <EffectComposer multisampling={0}>
-          <Bloom intensity={bloom} luminanceThreshold={0.2} luminanceSmoothing={0.2} mipmapBlur />
+          <Bloom intensity={level >= 3 ? Math.min(bloom, 0.5) : bloom} luminanceThreshold={0.2} luminanceSmoothing={0.2} mipmapBlur />
         </EffectComposer>
       </Canvas>
     </div>

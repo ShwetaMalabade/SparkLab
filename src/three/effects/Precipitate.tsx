@@ -6,6 +6,7 @@ import { useMemo, useRef } from "react";
 import { InstancedMesh, Object3D } from "three";
 import type { Place } from "./Bubbles";
 import { rng } from "./rng";
+import { particles, useQuality } from "../quality";
 
 export type PrecipitateProps = { at: () => Place; color: string; active: boolean; count?: number };
 
@@ -13,7 +14,8 @@ const dummy = new Object3D();
 
 export function Precipitate({ at, color, active, count = 140 }: PrecipitateProps) {
   const mesh = useRef<InstancedMesh>(null);
-  const n = Math.min(150, count);
+  const level = useQuality((q) => q.level);
+  const n = particles(Math.min(150, count), level); // P1-20: halved when the arena is slow
   // Normalised units (fractions of radius / height).
   const parts = useMemo(() => {
     const r = rng(23);

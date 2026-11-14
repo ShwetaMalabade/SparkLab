@@ -7,6 +7,7 @@ import { keyToEvent } from "../src/motion/keyboard";
 import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { reportFps, useQuality, particles } from "../src/three/quality";
 import { checkClip, packFrame, replayClip, type Clip } from "../src/motion/clips";
 import { judge, speciesOf, trapped, atomCounts, trapFormula } from "../src/game/balancer";
 import { range, fieldLength, speedForRange, choiceNumber, arc, maxHeight } from "../src/game/physics";
@@ -238,6 +239,21 @@ ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("Whit
     const bad = checkClip(clip, replayClip(clip, 1e8 + i * 1e6));
     ok(`recorded clip ${f}`, bad.length === 0, bad.join(" · "));
   });
+}
+
+// ---- Auto quality (P1-20, 05 §8): < 30 fps for 3 s → one step down, in order; never back up ----
+{
+  const feed = (fps: number, n: number) => { for (let i = 0; i < n; i++) reportFps(fps); };
+  feed(10, 3); // warm-up seconds are ignored
+  ok("quality: warm-up ignored", useQuality.getState().level === 0);
+  feed(60, 5); feed(25, 2); feed(60, 1); feed(25, 2);
+  ok("quality: short dips don't step down", useQuality.getState().level === 0);
+  feed(25, 3);
+  ok("quality: 3 s under 30 → level 1 (half particles)", useQuality.getState().level === 1 && particles(160, 1) === 80);
+  feed(20, 9);
+  ok("quality: keeps stepping to 3 at most", useQuality.getState().level === 3);
+  feed(60, 10);
+  ok("quality: never steps back up", useQuality.getState().level === 3);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
