@@ -10,6 +10,7 @@ import { fallbackNext, type Session } from "@/lib/agents/director";
 import fixtureJson from "../../../data/fixtures/worksheet.json";
 import { newClassCode } from "@/lib/classCode";
 import { getMode } from "./mode";
+import { getTimeBudget } from "./prefs";
 import type { AttemptInput, IngestStep, NextStep } from "./types";
 
 export { getMode };
@@ -107,7 +108,7 @@ export async function createSession(s: {
   timeBudgetSec?: number;
 }): Promise<{ sessionId: string; timeBudgetSec: number }> {
   const sessionId = "s_mock";
-  const timeBudgetSec = s.timeBudgetSec ?? 600;
+  const timeBudgetSec = s.timeBudgetSec ?? getTimeBudget(); // the budget picked on Landing
   const sessions = readJSON<Record<string, MockSession>>("local", K.sessions, {});
   sessions[sessionId] = { worksheetId: s.worksheetId, classCode: s.classCode, nickname: s.nickname, timeBudgetSec, startedAt: Date.now(), endedAt: null };
   writeJSON("local", K.sessions, sessions);
