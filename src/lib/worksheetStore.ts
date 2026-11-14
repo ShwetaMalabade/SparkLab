@@ -40,6 +40,19 @@ export async function replaceQuestion(id: string, question: TWorksheet["question
   await db.update("worksheets", { _id: id }, { $set: { questions, drafts: { ...doc.drafts, [question.id]: draft } } });
 }
 
+/** Teacher removed a question on Review. Refuses to remove the last one (a worksheet needs ≥ 1). */
+export async function removeQuestion(id: string, questionId: string): Promise<"ok" | "missing" | "last"> {
+  const doc = await db.findOne<WorksheetDoc>("worksheets", { _id: id });
+  if (!doc || !doc.questions.some((q) => q.id === questionId)) return "missing";
+  if (doc.questions.length === 1) return "last";
+  const drafts = { ...doc.drafts };
+  delete drafts[questionId];
+  await db.update("worksheets", { _id: id }, {
+    $set: { questions: doc.questions.filter((q) => q.id !== questionId), drafts, dropped: [...(doc.dropped ?? []), `removed ${questionId} on Review`] },
+  });
+  return "ok";
+}
+
 function toWorksheet(doc: WorksheetDoc): TWorksheet {
   return Worksheet.parse({
     id: doc._id,

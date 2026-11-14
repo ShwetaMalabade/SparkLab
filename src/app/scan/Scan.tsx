@@ -60,7 +60,7 @@ export function Scan() {
         await chain;
         await sleep(MIN_STEP_MS);
         setLastWorksheetId(ws.id);
-        router.push(`/play/${ws.id}`); // → /review/<id> once the Review page exists (P2-14)
+        router.push(`/review/${ws.id}`);
       } catch (e) {
         await chain;
         setError(e instanceof Error ? e.message : "Something went wrong. Try again.");

@@ -46,7 +46,7 @@ export function Landing() {
       // A class linked to the last worksheet right away: no scan, no AI calls.
       const c = await createClass({ timeBudgetSec: budget, worksheetId: lastWs });
       setCreatedCode(c.code);
-      router.push(`/play/${lastWs}`); // → /review/<id> once the Review page exists (P2-14)
+      router.push(`/review/${lastWs}`);
     } catch {
       setError("That last scan is no longer available. Scan the worksheet again.");
       setBusy(false);
