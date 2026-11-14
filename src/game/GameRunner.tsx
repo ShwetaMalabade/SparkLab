@@ -43,10 +43,10 @@ export function roomFor(q: TQuestion): RoomId {
   return "study";
 }
 
-/** Lab world (walk between rooms) is on for chemistry worksheets; `?world=0` turns it off. */
+/** Lab world (walk between rooms): OFF by default until the new 3D models are in; `?world=1` turns it on. */
 function useWorldOn(worksheet: TWorksheet) {
-  const [off] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("world") === "0");
-  return !off && worksheet.questions.some((q) => q.subject === "chemistry");
+  const [on] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("world") === "1");
+  return on && worksheet.questions.some((q) => q.subject === "chemistry");
 }
 
 export function GameRunner({ worksheet, session, calibrated }: Props) {
