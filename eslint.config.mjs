@@ -34,6 +34,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Plan docs + reference code (copied into src/ by P2-03)
     "docs/**",
+    // MediaPipe's generated WASM loader, copied from node_modules (third-party)
+    "public/mediapipe-wasm/**",
   ]),
 ]);
 
