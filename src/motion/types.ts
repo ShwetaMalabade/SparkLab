@@ -22,7 +22,7 @@ export type GestureEvent = {
 };
 
 /** Keyboard-only controls that are not gestures (04 §7). Same bus, so one subscription covers both. */
-export type CommandName = "pick" | "skip" | "pause" | "debug" | "trace" | "angle" | "power";
+export type CommandName = "pick" | "skip" | "pause" | "debug" | "trace" | "angle" | "power" | "subscript";
 export type CommandEvent = { type: "command"; cmd: CommandName; value?: number; t: number; source: InputSource };
 
 export type MotionEvent = GestureEvent | CommandEvent;

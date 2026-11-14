@@ -33,6 +33,7 @@ export function keyToEvent(e: Pick<KeyboardEvent, "key" | "repeat">, t: number):
     case "p": return { type: "command", cmd: "pause", t, source: src };
     case "d": return { type: "command", cmd: "debug", t, source: src };
     case "t": return { type: "command", cmd: "trace", t, source: src };
+    case "x": return { type: "command", cmd: "subscript", t, source: src }; // Balancer subscript trap
     default: return null;
   }
 }

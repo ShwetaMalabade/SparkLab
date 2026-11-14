@@ -6,6 +6,8 @@ import { subscribe, useGame } from "../src/game/store";
 import { keyToEvent } from "../src/motion/keyboard";
 import type { RawLandmark } from "../src/motion/pose";
 import type { MotionEvent } from "../src/motion/types";
+import { readFileSync } from "node:fs";
+import { judge, speciesOf, trapped, atomCounts, trapFormula } from "../src/game/balancer";
 import { range, fieldLength, speedForRange, choiceNumber, arc, maxHeight } from "../src/game/physics";
 
 let pass = 0, fail = 0;
@@ -171,6 +173,30 @@ ok("arc peak = H", Math.abs(Math.max(...arc(20, 30, 200).map((p) => p.y)) - maxH
 ok("ghost speed lands at the wrong value", Math.abs(range(speedForRange(20.4, 30), 30) - 20.4) < 1e-9);
 ok("field: v=20 → 50 m, free speed → 100 m", fieldLength(20) === 50 && fieldLength(null) === 100);
 ok("choice numbers parse", choiceNumber("20.4 m") === 20.4 && choiceNumber("White solid forms") === null);
+
+// ---- Equation Balancer (P1-16 Done-when, docs/plan/05 §4) ----
+{
+  const ws = JSON.parse(readFileSync("data/fixtures/worksheet.json", "utf8"));
+  const q4 = ws.questions.find((q: { id: string }) => q.id === "q4");
+  const sp = speciesOf(q4)!;
+  const c = (l: number[], r: number[]) => ({ left: l, right: r });
+  const j = (l: number[], r: number[], trap = false) => judge(q4, ws, trap ? trapped(sp) : sp, c(l, r), { trap });
+  const v1 = j([2, 1], [2]);
+  ok("q4: 2,1,2 → correct (D)", v1.kind === "lock" && v1.correct && v1.chosen === "D", JSON.stringify(v1));
+  const v2 = j([1, 1], [2]);
+  ok("q4: 1,1,2 → unbalanced_hydrogen", v2.kind === "lock" && !v2.correct && v2.misconceptionId === "unbalanced_hydrogen", JSON.stringify(v2));
+  const v3 = j([1, 1], [1], true);
+  ok("q4: subscript trap → changed_subscripts", v3.kind === "lock" && v3.misconceptionId === "changed_subscripts", JSON.stringify(v3));
+  ok("q4: 4,2,4 → 'now simplify' (no lock)", j([4, 2], [4]).kind === "simplify");
+  const v5 = judge(q4, ws, sp, c([4, 2], [4]), { trap: false, secondSimplify: true });
+  ok("q4: 4,2,4 twice → locks as wrong X", v5.kind === "lock" && v5.chosen === "X" && !v5.correct);
+  const v6 = j([3, 1], [2]);
+  ok("q4: 3,1,2 (no matching choice) → X + first mismatched element", v6.kind === "lock" && v6.chosen === "X" && v6.chosenText === "3, 1, 2" && v6.misconceptionId === "unbalanced_hydrogen", JSON.stringify(v6));
+  ok("trap: H2O → H2O2, KNO3 → KNO4", trapFormula("H2O") === "H2O2" && trapFormula("KNO3") === "KNO4");
+  const a = atomCounts(sp, c([1, 1], [2]));
+  ok("atom counters: 1,1,2 → H 2|4, O 2|2", JSON.stringify(a.rows) === JSON.stringify([{ el: "H", left: 2, right: 4 }, { el: "O", left: 2, right: 2 }]));
+  ok("X key → subscript trap", keyToEvent({ key: "x", repeat: false }, 0)?.type === "command");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

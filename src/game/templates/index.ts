@@ -1,9 +1,11 @@
 // src/game/templates/index.ts: question.template → template. Unknown or invalid props → Answer Balloons (05 §1).
 import type { TQuestion } from "@/lib/schema";
 import { AnswerBalloons } from "./AnswerBalloons";
+import { EquationBalancer } from "./EquationBalancer";
 import { MixLab } from "./MixLab";
 import { ProjectileLauncher } from "./ProjectileLauncher";
 import type { TemplateDef } from "./types";
+import { speciesOf } from "../balancer";
 
 export type TemplateName = TQuestion["template"];
 
@@ -15,7 +17,7 @@ export function templateFits(q: TQuestion, name: TemplateName): boolean {
     case "mix_lab":
       return !!q.reaction && q.reaction.reactants.length >= 2;
     case "equation_balancer":
-      return !!q.equation;
+      return !!q.equation && speciesOf(q) !== null;
     default:
       return true;
   }
@@ -26,6 +28,7 @@ const REGISTRY: Partial<Record<TemplateName, TemplateDef>> = {
   answer_balloons: AnswerBalloons,
   projectile_launcher: ProjectileLauncher,
   mix_lab: MixLab,
+  equation_balancer: EquationBalancer,
 };
 
 export function pickTemplate(q: TQuestion): { def: TemplateDef; name: TemplateName } {

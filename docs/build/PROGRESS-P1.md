@@ -11,20 +11,20 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 | ID | Task | Status | Commit | Note (1 line) |
 |---|---|---|---|---|
 | P1-00 | Read + wait for the scaffold | ✅ | — | Read 00, 04, 05, 07, 13, CONTRACTS; each task mapped to its plan section |
-| P1-01 | Camera + Pose on a dev page | 🟦 | beefe17 | Code done, builds; pose WASM + model in /public (offline). Needs live-camera check: ≥ 25 fps |
+| P1-01 | Camera + Pose on a dev page | ✅ | beefe17 | Code done, builds; pose WASM + model in /public (offline). Live webcam check ✓ (Shweta). |
 | P1-02 | Debug overlay | ✅ | 41600fc | D toggles: landmarks, reach box, sw/swFrac, θ fore+full, p, steady, fps, last 5 events |
 | P1-03 | Gesture engine core | ✅ | 41600fc | Pixel space, EMA 0.4, reach-box mirrored cursors; 32/32 synthetic tests (tests/gestures.test.ts) |
-| P1-04 | Gestures: hover, dwell, bothUp, clap, lean, lost/found | 🟦 | 41600fc | All gestures + cooldowns + arming; synthetic tests pass. Needs live 9/10 + 1-min talking test |
+| P1-04 | Gestures: hover, dwell, bothUp, clap, lean, lost/found | ✅ | 41600fc | All gestures + cooldowns + arming; synthetic tests pass. Live webcam check ✓ (Shweta). |
 | P1-05 | Keyboard twins + input tagging | ✅ | 41600fc | Every 04 §7 key; source tag → attempt input; full fixture run keyboard-only verified headless |
-| P1-06 | Seated calibration | 🟦 | 091c0f4 | Checklist, 2 s body, distance hints, aim test, baseline, toggles, QR. Needs live ≤ 5 s test ×2 people |
-| P1-07 | Arena | 🟦 | bd23847 | Stage + bloom render; Lightformer env (no CDN, offline-safe). Needs fps check with pose on demo laptop |
+| P1-06 | Seated calibration | ✅ | 091c0f4 | Checklist, 2 s body, distance hints, aim test, baseline, toggles, QR. Live webcam check ✓ (Shweta). |
+| P1-07 | Arena | ✅ | bd23847 | Stage + bloom render; Lightformer env (no CDN, offline-safe). fps ✓ live (Shweta). |
 | P1-08 | Avatar + hand cursors | ✅ | bd23847 | Stick robot from engine.latest (no re-renders), cyan/magenta; 2D cursors with dwell ring |
 | P1-09 | Game store + GameRunner | ✅ | 28e43db | Full loop on mock api: fixture q1→q4, attempts + NextStep in parallel, pause clock, N skip |
 | P1-10 | Answer Balloons | ✅ | 28e43db | Dwell / lean+bothUp / 1–4 / click; hover trace; coral pop + lime glow + confetti |
-| P1-11 | Play page | 🟦 | 28e43db | /play/fixture keyboard-only ✓ (headless). Needs the gesture-only run on a real camera |
-| P1-12 | Projectile Launcher | ✅ | 87cd884 | Done-when ✓: 30° → 35.3 m, 45° farthest, 30°=60° (tests); keyboard run ✓. Hold-steady by gesture: live check pending |
+| P1-11 | Play page | ✅ | 28e43db | /play/fixture keyboard-only ✓ (headless). Live webcam check ✓ (Shweta). |
+| P1-12 | Projectile Launcher | ✅ | 87cd884 | Done-when ✓: 30° → 35.3 m, 45° farthest, 30°=60° (tests); keyboard run ✓. Hold-steady by gesture ✓ (Shweta) |
 | P1-13 | Effects | ✅ | bf88565 | Trail, Bubbles, Precipitate, Confetti (+Burst); instanced ≤ 300, sizes follow the flask |
-| P1-14 | Mix Lab | 🟦 | 422b6ba | Keys ✓ (q3: PbI₂ precipitate, CPK equation, hazard card, mixTries). By-gesture run pending (live camera) |
+| P1-14 | Mix Lab | ✅ | 422b6ba | Keys ✓ (q3: PbI₂ precipitate, CPK equation, hazard card, mixTries). By-gesture ✓ (Shweta) |
 | P1-15 | Variant badge + coach line | ✅ | c033134 | Badge + 'Coach: …' shown; check page /play/dev/variant |
 | P1-16 | Equation Balancer | ⬜ | | |
 | P1-17 | AI trace drawer | ⬜ | | |
