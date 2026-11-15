@@ -57,6 +57,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Experiments Lab (new, in `/play/lab`):** the "Physical Chemistry, coming soon" room is now the Experiments Lab (room id `study` unchanged, unlocked). First experiment: baking-soda volcano (`src/game/lab/VolcanoLab.tsx`, chemistry in `src/game/experiments.ts`). New activity kind `{ kind: "volcano" }` in `lessons.ts`.
 - **Molecule Builder fix (after your handoff):** the bench spawned 3 of every element, so CH4 / C2H6 couldn't be finished by hand. Supply now = what the molecule needs + 1 spare, decoys ×2 (`benchSupply` in `src/game/molecules.ts`, tested in `tests/chem-labs.test.ts`).
 - **Fixture changed (P2-28):** q1 is now a titration and q2 a mystery (no more launcher/friction); q3 Mix Lab and q4 Balancer are identical (your 71 gesture tests pass), q5 is stoichiometry balloons. `/play/dev/variant` copies q1, so it now shows a titration variant.
 - **Real coach questions now arrive (b3f1ee4).** With the real model, a wrong answer usually gets a coach-written question: `origin: "variant"`, ids like `q1v1`, `q4v2`; it can be any template (seen: launcher and balancer). Your P1-15 badge path is the one that runs.
