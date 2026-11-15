@@ -31,15 +31,25 @@ export type BenchItem = {
   look: "jar" | "bottle" | "dropper" | "beaker" | "jug" | "nail" | "tablet" | "balloon";
 };
 
-type BState = {
+export type BState = {
   amounts: Record<string, number>; // per item: how much went in (total)
   into: Record<string, number[]>; // per item: how much went into each target
   held: Record<Side, string | null>;
   grabTilt: Record<Side, number>;
   auto: { item: string; until: number; target: number } | null;
   run: number; // bumps on "again"
+  /** Guided steps: only these items can be used right now (null = all; [] = none, e.g. a "watch" step). */
+  allowed: string[] | null;
+  /** Guided steps: this item may only pour into this target. */
+  lock: Record<string, number> | null;
+  /** Things the scene saw happen ("erupted", "inflated"…), for "watch" steps. */
+  flags: Record<string, boolean>;
 };
-const freshB = (run = 0): BState => ({ amounts: {}, into: {}, held: { left: null, right: null }, grabTilt: { left: 0, right: 0 }, auto: null, run });
+const freshB = (run = 0): BState => ({ amounts: {}, into: {}, held: { left: null, right: null }, grabTilt: { left: 0, right: 0 }, auto: null, run, allowed: null, lock: null, flags: {} });
+export const setFlag = (name: string) => {
+  if (!useBench.getState().flags[name]) useBench.setState((s) => ({ flags: { ...s.flags, [name]: true } }));
+};
+const canUse = (st: BState, id: string) => !st.allowed || st.allowed.includes(id);
 export const useBench = create<BState>(() => freshB());
 export const resetBench = () => useBench.setState((s) => freshB(s.run + 1));
 export const amountOf = (id: string) => useBench.getState().amounts[id] ?? 0;
@@ -47,10 +57,12 @@ export const amountOf = (id: string) => useBench.getState().amounts[id] ?? 0;
 /** Key / click twin: pour one step of an item (into target `t`, or its own target). */
 export function autoPour(item: BenchItem, t?: number) {
   const st = useBench.getState();
-  if (st.auto) return;
+  if (st.auto || !canUse(st, item.id)) return; // guided: not this step yet
   const now = st.amounts[item.id] ?? 0;
   if (now >= item.limit - 1e-6) return;
-  useBench.setState({ auto: { item: item.id, until: Math.min(item.limit, now + item.step), target: t ?? (typeof item.target === "number" ? item.target : 0) } });
+  const locked = st.lock?.[item.id];
+  if (locked !== undefined && t !== undefined && t !== locked) return;
+  useBench.setState({ auto: { item: item.id, until: Math.min(item.limit, now + item.step), target: locked ?? t ?? (typeof item.target === "number" ? item.target : 0) } });
 }
 
 // ---------------------------------------------------------------- 3D: hands + pouring
@@ -72,6 +84,8 @@ export function BenchItems({ items, targets, onFrame }: { items: BenchItem[]; ta
   const groups = useRef<Record<string, Group | null>>({});
   const stream = useRef<Mesh>(null);
   const drop = useRef<Mesh>(null);
+  const arrow = useRef<Group>(null);
+  const ring = useRef<Mesh>(null);
   const sim = useRef({ screen: {} as Record<string, { x: number; y: number }>, targetsScreen: [] as { x: number; y: number }[], dropT: 0 });
   const tmp = useMemo(() => new Vector3(), []);
 
@@ -84,7 +98,7 @@ export function BenchItems({ items, targets, onFrame }: { items: BenchItem[]; ta
         if (!c.visible || st.auto) return;
         let best: string | null = null, bestD = 140;
         for (const it of items) {
-          if (st.held.left === it.id || st.held.right === it.id || (st.amounts[it.id] ?? 0) >= it.limit - 1e-6) continue;
+          if (!canUse(st, it.id) || st.held.left === it.id || st.held.right === it.id || (st.amounts[it.id] ?? 0) >= it.limit - 1e-6) continue;
           const p = sim.current.screen[it.id];
           if (!p) continue;
           const d = Math.hypot(p.x - c.x, p.y - c.y);
@@ -107,7 +121,7 @@ export function BenchItems({ items, targets, onFrame }: { items: BenchItem[]; ta
     return () => offs.forEach((o) => o());
   }, [items]);
 
-  useFrame((_, rawDt) => {
+  useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const S = sim.current;
     const st = useBench.getState();
@@ -143,7 +157,8 @@ export function BenchItems({ items, targets, onFrame }: { items: BenchItem[]; ta
         // Pour into the target under the hand (nearest on screen).
         let bd = 170;
         S.targetsScreen.forEach((p, i) => {
-          if (it.target !== "nearest" && typeof it.target === "number" && i !== it.target) return;
+          const lockT = st.lock?.[it.id];
+          if (lockT !== undefined ? i !== lockT : it.target !== "nearest" && typeof it.target === "number" && i !== it.target) return;
           const dd = Math.hypot(c.x - p.x, c.y - p.y);
           if (dd < bd) {
             bd = dd;
@@ -212,6 +227,22 @@ export function BenchItems({ items, targets, onFrame }: { items: BenchItem[]; ta
         (dr.material as MeshStandardMaterial).color.set(pouring.color);
       }
     }
+    // Guided step: an arrow bobs over the item to use now, a ring pulses on where it goes.
+    const cur = st.allowed && st.allowed.length === 1 ? items.find((i) => i.id === st.allowed![0]) : undefined;
+    const curG = cur ? groups.current[cur.id] : null;
+    const busy = !!cur && (st.auto?.item === cur.id || st.held.left === cur.id || st.held.right === cur.id);
+    if (arrow.current) {
+      arrow.current.visible = !!curG && !busy;
+      if (curG) arrow.current.position.set(curG.position.x, curG.position.y + 1.05 + Math.sin(clock.elapsedTime * 4) * 0.07, curG.position.z);
+    }
+    if (ring.current) {
+      const tIdx = cur ? (st.lock?.[cur.id] ?? (typeof cur.target === "number" ? cur.target : cur.target === "nearest" ? -1 : 0)) : -1;
+      ring.current.visible = !!cur && tIdx >= 0 && !!targets[tIdx];
+      if (ring.current.visible) {
+        ring.current.position.copy(targets[tIdx]).setY(targets[tIdx].y + 0.04);
+        ring.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.08);
+      }
+    }
     onFrame?.({ item: pouring, target, lip, to }, dt);
   });
 
@@ -229,6 +260,20 @@ export function BenchItems({ items, targets, onFrame }: { items: BenchItem[]; ta
       <mesh ref={drop} visible={false}>
         <sphereGeometry args={[0.035, 12, 10]} />
         <meshStandardMaterial color="#DC2626" emissive="#DC2626" emissiveIntensity={0.15} />
+      </mesh>
+      <group ref={arrow} visible={false}>
+        <mesh rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.1, 0.24, 20]} />
+          <meshStandardMaterial color="#A3E635" emissive="#A3E635" emissiveIntensity={0.6} />
+        </mesh>
+        <mesh position={[0, 0.2, 0]}>
+          <cylinderGeometry args={[0.035, 0.035, 0.18, 12]} />
+          <meshStandardMaterial color="#A3E635" emissive="#A3E635" emissiveIntensity={0.6} />
+        </mesh>
+      </group>
+      <mesh ref={ring} rotation={[Math.PI / 2, 0, 0]} visible={false}>
+        <torusGeometry args={[0.3, 0.018, 10, 40]} />
+        <meshStandardMaterial color="#A3E635" emissive="#A3E635" emissiveIntensity={0.7} transparent opacity={0.8} />
       </mesh>
     </group>
   );
@@ -438,20 +483,21 @@ export function ExpHeader({ kicker, title, chips, hint }: { kicker: string; titl
 /** Bottom labels: one per item, with its key and amount; a click (or dwell) pours one step. */
 export function ItemLabels({ items, onPick }: { items: BenchItem[]; onPick: (it: BenchItem) => void }) {
   const amounts = useBench((s) => s.amounts);
+  const allowed = useBench((s) => s.allowed);
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-[3vh] z-20 flex justify-center gap-3 px-[12vw]">
       {items.map((it, i) => (
-        <ItemLabel key={it.id} it={it} n={i + 1} amount={amounts[it.id] ?? 0} onPick={onPick} />
+        <ItemLabel key={it.id} it={it} n={i + 1} amount={amounts[it.id] ?? 0} onPick={onPick} state={!allowed ? "free" : allowed.includes(it.id) ? "now" : "locked"} />
       ))}
     </div>
   );
 }
 
-function ItemLabel({ it, n, amount, onPick }: { it: BenchItem; n: number; amount: number; onPick: (it: BenchItem) => void }) {
+function ItemLabel({ it, n, amount, onPick, state }: { it: BenchItem; n: number; amount: number; onPick: (it: BenchItem) => void; state: "free" | "now" | "locked" }) {
   const ref = useRef<HTMLDivElement>(null);
   const id = `bench:${it.id}`;
   const full = amount >= it.limit - 1e-6;
-  const mouse = useTarget(id, ref, !full);
+  const mouse = useTarget(id, ref, !full && state !== "locked");
   useEffect(
     () =>
       subscribe("dwell", (e) => {
@@ -461,16 +507,65 @@ function ItemLabel({ it, n, amount, onPick }: { it: BenchItem; n: number; amount
   );
   return (
     <div ref={ref} {...mouse} role="button"
-      className={`pointer-events-auto w-[190px] cursor-pointer rounded-xl border bg-navy/85 px-3 py-2 text-center ${full ? "border-lime/60 opacity-70" : "border-line"}`}>
+      className={`pointer-events-auto w-[190px] rounded-xl border bg-navy/85 px-3 py-2 text-center transition-all ${
+        state === "now" ? "scale-105 cursor-pointer border-2 border-lime shadow-[0_0_18px_rgba(163,230,53,0.45)]" : state === "locked" ? "cursor-not-allowed border-line opacity-45" : full ? "border-lime/60 opacity-70" : "cursor-pointer border-line"
+      }`}>
       {it.formula ? <ChemText text={it.formula} className="block font-display text-lg" /> : <span className="block font-display text-lg" style={{ color: it.color }}>●</span>}
       <span className="text-sm text-muted">{it.name}</span>
-      <span className="block text-xs text-muted">{full ? "✓ all used" : `${n} · or click · ${it.unit(amount)}`}</span>
+      <span className={`block text-xs ${state === "now" ? "font-semibold text-lime" : "text-muted"}`}>
+        {state === "locked" ? (amount > 0 ? `✓ ${it.unit(amount)}` : "🔒 later step") : state === "now" ? `← do this now · key ${n} · ${it.unit(amount)}` : full ? "✓ all used" : `${n} · or click · ${it.unit(amount)}`}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Guided steps
+
+/** One step of a guided experiment. `item` (+ optional `target`) is the only thing usable during it; a step
+ *  with no item is a "watch" step that finishes when `done` sees what happened (amounts or scene flags). */
+export type Step = { text: string; item?: string; target?: number; why: string; done: (b: BState) => boolean };
+
+/** The current step = the first one not done. Gates the bench to that step's item (and target). */
+export function useGuide(steps: Step[]) {
+  const b = useBench();
+  const found = steps.findIndex((s) => !s.done(b));
+  const current = found === -1 ? steps.length : found;
+  useEffect(() => {
+    const s = steps[current];
+    useBench.setState({
+      allowed: s ? (s.item ? [s.item] : []) : null, // all done: free play (pour more, bigger reaction)
+      lock: s?.item !== undefined && s.target !== undefined ? { [s.item]: s.target } : null,
+    });
+  }, [current, b.run, steps]);
+  return { current, finished: current >= steps.length, total: steps.length };
+}
+
+/** Left panel: the numbered steps, current one highlighted, finished ones ticked with their "why". */
+export function GuidePanel({ steps, current }: { steps: Step[]; current: number }) {
+  return (
+    <div className="pointer-events-none absolute left-4 top-[9.5rem] z-30 w-[min(330px,28vw)] rounded-2xl border border-cyan/40 bg-navy/90 p-3 shadow-xl">
+      <div className="mb-2 text-xs uppercase tracking-wider text-muted">{current >= steps.length ? "✓ All steps done" : `Step ${current + 1} of ${steps.length}`}</div>
+      <ol className="flex flex-col gap-1.5">
+        {steps.map((s, i) => {
+          const done = i < current, now = i === current;
+          return (
+            <li key={s.text} className={`flex gap-2 rounded-xl px-2 py-1.5 ${now ? "bg-lime/15 ring-2 ring-lime" : ""}`}>
+              <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-sm font-bold ${done ? "bg-lime text-navy" : now ? "bg-cyan text-navy" : "bg-panel text-muted"}`}>{done ? "✓" : i + 1}</span>
+              <div className={done ? "text-text" : now ? "text-text" : "text-muted"}>
+                <div className={`leading-snug ${now ? "font-semibold" : ""}`}>{s.text}</div>
+                {done && <div className="text-xs leading-snug text-lime/90">{s.why}</div>}
+                {now && !s.item && <div className="text-xs text-cyan">👀 watch the bench…</div>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
 
 /** The explanation card with Again / Next. */
-export function ResultCard({ title, equation, why, numbers, onNext }: { title: string; equation?: string; why: string[]; numbers?: ReactNode; onNext: () => void }) {
+export function ResultCard({ title, equation, why, numbers, onNext, recap }: { title: string; equation?: string; why: string[]; numbers?: ReactNode; onNext: () => void; recap?: Step[] }) {
   useEffect(() => {
     const offs = [
       subscribe("dwell", (e) => {
@@ -487,9 +582,20 @@ export function ResultCard({ title, equation, why, numbers, onNext }: { title: s
       <div className="flex max-h-[calc(87vh-140px)] flex-col gap-2 overflow-y-auto rounded-3xl border border-lime/50 bg-navy/95 p-4 shadow-2xl">
         <div className="font-display text-xl text-lime">✓ {title}</div>
         <div className="grid grid-cols-2 gap-3">
-          <Btn id="exp:again" title="↺ Again" sub="R · try other amounts" />
+          <Btn id="exp:again" title="↺ Again" sub="R · from step 1" />
           <Btn id="exp:next" title="Experiments ▶" sub="✊ / Enter / both hands up" />
         </div>
+        {recap && (
+          <div className="rounded-xl border border-cyan/30 bg-panel px-3 py-2">
+            <div className="mb-1 text-xs uppercase tracking-wider text-muted">What you did, step by step</div>
+            <ol className="flex flex-col gap-1 text-sm">
+              {recap.map((s, i) => (
+                <li key={s.text}><b className="text-cyan">{i + 1}.</b> {s.text} <span className="text-muted">→ {s.why}</span></li>
+              ))}
+            </ol>
+          </div>
+        )}
+        <div className="text-xs uppercase tracking-wider text-muted">The science</div>
         {equation && <div className="rounded-xl bg-panel px-3 py-1.5 font-display text-lg"><ChemText text={equation} /></div>}
         <ul className="list-disc pl-5 text-base leading-snug text-text">
           {why.map((w) => (

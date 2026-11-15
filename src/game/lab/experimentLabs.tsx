@@ -12,12 +12,14 @@ import {
   balloonState, BALLOON, CABBAGE_CUPS, cabbageColor, COPPER, copperNail, ELEPHANT, elephantState, LAVA_LAMP, lavaLampTablet,
   PACKS, packTemperature, pHKind, REACTIVITY, SALTS, VOLCANO,
 } from "../experiments";
-import { autoPour, Bench, BenchItems, ExpHeader, Foam, ItemLabels, resetBench, ResultCard, useBench, useDelayedCard, useExpKeys, Vessel, type BenchItem } from "./benchKit";
+import { autoPour, Bench, BenchItems, ExpHeader, Foam, GuidePanel, ItemLabels, resetBench, ResultCard, setFlag, useBench, useDelayedCard, useExpKeys, useGuide, Vessel, type BenchItem, type Step } from "./benchKit";
 
 const v3 = (x: number, y: number, z: number) => new Vector3(x, y, z);
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const mix = (a: string, b: string, t: number) => "#" + new Color(a).lerp(new Color(b), clamp01(t)).getHexString();
 const pct = (v: number) => `${Math.round(v * 100)}% used`;
+const stepHint = (steps: Step[], g: { current: number; total: number; finished: boolean }, after: string) =>
+  g.finished ? after : `Step ${g.current + 1} of ${g.total}: ${steps[g.current].text}`;
 const keysFor = (items: BenchItem[]) => Object.fromEntries([...items.map((it, i) => [String(i + 1), () => autoPour(it)] as const), ["r", resetBench] as const]);
 const Tray = ({ x = 0.2, z = 0.6, r = 1.1 }: { x?: number; z?: number; r?: number }) => (
   <mesh position={[x, 0.015, z]} scale={[1, 1, 0.6]}>
@@ -46,6 +48,7 @@ export function BalloonScene() {
     const s = balloonState(attached ? (a.soda ?? 0) : 0, a.vinegar ?? 0);
     const want = attached ? 0.09 + s.radiusCm * 0.03 : 0;
     r.current += (want - r.current) * Math.min(1, dt * 0.9);
+    if (attached && want > 0 && Math.abs(want - r.current) < want * 0.06) setFlag("inflated");
     const m = balloon.current;
     if (m) {
       m.visible = attached;
@@ -79,23 +82,30 @@ export function BalloonScene() {
   );
 }
 
+const B_STEPS: Step[] = [
+  { text: "Pour vinegar into the bottle", item: "vinegar", target: 0, why: "Vinegar is acetic acid: the acid.", done: (b) => (b.amounts.vinegar ?? 0) >= 0.45 },
+  { text: "Spoon baking soda into the balloon", item: "soda", target: 1, why: "The baking soda (NaHCO₃) waits in the balloon, away from the acid.", done: (b) => (b.amounts.soda ?? 0) >= 0.45 },
+  { text: "Fit the balloon on the bottle and tip it up", item: "balloon", target: 0, why: "The soda falls into the vinegar and they start to react.", done: (b) => (b.amounts.balloon ?? 0) >= 1 },
+  { text: "Watch the balloon inflate", why: "The CO₂ can't escape the closed bottle, so it fills the balloon.", done: (b) => !!b.flags.inflated },
+];
+
 export function BalloonOverlay({ onNext }: { onNext: () => void }) {
   const a = useBench((s) => s.amounts);
   useEffect(() => resetBench(), []);
   useExpKeys(keysFor(B_ITEMS));
+  const g = useGuide(B_STEPS);
   const attached = (a.balloon ?? 0) >= 1;
   const s = balloonState(attached ? (a.soda ?? 0) : 0, a.vinegar ?? 0);
-  const done = attached && s.reacted > 0;
-  const show = useDelayedCard(done, 3500);
-  const hint = done ? null : attached ? (a.vinegar ?? 0) === 0 ? "The bottle is empty: nothing to react with. Press R and add vinegar first." : "No baking soda in the balloon, so nothing happens. Press R and try again." : (a.vinegar ?? 0) === 0 ? "Pour vinegar into the bottle." : (a.soda ?? 0) === 0 ? "Now put baking soda in the balloon (the funnel)." : "Fit the balloon on the bottle and tip it up!";
+  const show = useDelayedCard(g.finished, 1200);
   return (
     <>
       <ExpHeader kicker="Experiment · balloon inflator" title="🎈 Blow up a balloon with a chemical reaction (no breath needed)."
-        chips={[{ ok: (a.vinegar ?? 0) > 0, text: `Vinegar ${Math.round(s.vinegarML || (a.vinegar ?? 0) * BALLOON.vinegarML)} mL` }, { ok: (a.soda ?? 0) > 0, text: `Baking soda ${((a.soda ?? 0) * BALLOON.sodaG).toFixed(1)} g` }, { ok: attached, text: "Balloon on" }, ...(done ? [{ ok: true, text: `CO₂ ${s.co2L.toFixed(2)} L`, tone: "lime" as const }] : [])]}
-        hint={hint} />
+        chips={[{ ok: (a.vinegar ?? 0) > 0, text: `Vinegar ${Math.round((a.vinegar ?? 0) * BALLOON.vinegarML)} mL` }, { ok: (a.soda ?? 0) > 0, text: `Baking soda ${((a.soda ?? 0) * BALLOON.sodaG).toFixed(1)} g` }, { ok: attached, text: "Balloon on" }, ...(s.reacted > 0 ? [{ ok: true, text: `CO₂ ${s.co2L.toFixed(2)} L`, tone: "lime" as const }] : [])]}
+        hint={stepHint(B_STEPS, g, "Done! Press R to try other amounts.")} />
+      <GuidePanel steps={B_STEPS} current={g.current} />
       <ItemLabels items={B_ITEMS} onPick={(it) => autoPour(it)} />
       {show && (
-        <ResultCard title="The balloon inflates!" equation={VOLCANO.equation} onNext={onNext}
+        <ResultCard title="The balloon inflated!" equation={VOLCANO.equation} onNext={onNext} recap={B_STEPS}
           why={["Vinegar (an acid) meets baking soda (sodium bicarbonate) and they react.", "One product is carbon dioxide gas. In a closed bottle it has only one way out: into the balloon.", "More gas = a bigger balloon, until one reactant runs out."]}
           numbers={<>{s.sodaG.toFixed(1)} g of baking soda ({s.molSoda.toFixed(3)} mol) + {Math.round(s.vinegarML)} mL of vinegar ({s.molAcid.toFixed(3)} mol) → <b className="text-lime">{s.co2L.toFixed(2)} L of CO₂</b>, a balloon about <b>{(s.radiusCm * 2).toFixed(0)} cm</b> across. {s.limiting === "neither" ? "Both ran out together." : `The ${s.limiting} ran out first (limiting reactant).`}</>} />
       )}
@@ -130,6 +140,7 @@ export function ElephantScene() {
     const out = s.reacting ? Math.min(pending.current, pending.current * s.speed * dt * 0.9 + 1e-5) : 0;
     pending.current -= out; released.current += out;
     energy.current = s.foamy ? Math.min(2.2, (out / Math.max(dt, 1e-3)) * 30) : 0;
+    if (s.reacting && released.current >= s.molO2 * 0.6) setFlag("foamed");
   });
   const dye = mix("#FFFFFF", "#7C3AED", (amounts.colour ?? 0) / 3);
   const st = elephantState(amounts.peroxide ?? 0, amounts.yeast ?? 0, amounts.soap ?? 0);
@@ -150,22 +161,31 @@ export function ElephantScene() {
   );
 }
 
+const E_STEPS: Step[] = [
+  { text: "Pour the hydrogen peroxide into the tall cylinder", item: "peroxide", why: "H₂O₂ breaks down into water and oxygen, but very slowly on its own.", done: (b) => (b.amounts.peroxide ?? 0) >= 0.45 },
+  { text: "Add a squirt of dish soap", item: "soap", why: "Soap will trap the oxygen gas in bubbles: foam.", done: (b) => (b.amounts.soap ?? 0) >= 0.9 },
+  { text: "Add a few drops of colour", item: "colour", why: "The colour only tints the foam; it doesn't react.", done: (b) => (b.amounts.colour ?? 0) >= 3 },
+  { text: "Pour in the yeast and stand back!", item: "yeast", why: "Yeast contains catalase, a catalyst: it makes the breakdown super fast.", done: (b) => (b.amounts.yeast ?? 0) >= 0.9 },
+  { text: "Watch the foam fountain", why: "Lots of oxygen, fast, trapped by soap = a fountain of foam.", done: (b) => !!b.flags.foamed },
+];
+
 export function ElephantOverlay({ onNext }: { onNext: () => void }) {
   const a = useBench((s) => s.amounts);
   useEffect(() => resetBench(), []);
   useExpKeys(keysFor(E_ITEMS));
+  const g = useGuide(E_STEPS);
   const s = elephantState(a.peroxide ?? 0, a.yeast ?? 0, a.soap ?? 0);
-  const show = useDelayedCard(s.reacting, 4000);
-  const hint = s.reacting ? (s.foamy ? null : "No soap, so the oxygen just bubbles away. Press R and add soap before the yeast.") : (a.peroxide ?? 0) === 0 ? "Pour the hydrogen peroxide into the tall cylinder." : (a.soap ?? 0) === 0 ? "Add a squirt of dish soap (it traps the gas as foam)." : (a.colour ?? 0) === 0 ? "A few drops of colour, then the yeast!" : "Now pour in the yeast and stand back!";
+  const show = useDelayedCard(g.finished, 1200);
   return (
     <>
-      <ExpHeader kicker="Experiment · elephant toothpaste" title="🧪 Make a giant foam fountain: peroxide, soap, colour, then the yeast."
+      <ExpHeader kicker="Experiment · elephant toothpaste" title="🧪 Make a giant foam fountain."
         chips={[{ ok: (a.peroxide ?? 0) > 0, text: `H₂O₂ ${Math.round(s.peroxideML)} mL` }, { ok: (a.soap ?? 0) > 0, text: "Soap" }, { ok: (a.colour ?? 0) > 0, text: `Colour ${Math.round(a.colour ?? 0)} drops` }, { ok: (a.yeast ?? 0) > 0, text: "Yeast" }, ...(s.reacting ? [{ ok: true, text: `O₂ ${s.o2L.toFixed(2)} L`, tone: "lime" as const }] : [])]}
-        hint={hint} />
+        hint={stepHint(E_STEPS, g, "Done! Add more peroxide for more foam.")} />
+      <GuidePanel steps={E_STEPS} current={g.current} />
       <ItemLabels items={E_ITEMS} onPick={(it) => autoPour(it)} />
       {show && (
-        <ResultCard title={s.foamy ? "A fountain of foam!" : "Lots of fizz, but no foam"} equation={ELEPHANT.equation} onNext={onNext}
-          why={["Hydrogen peroxide slowly breaks down into water and oxygen gas.", "Yeast contains catalase, a catalyst: it makes the reaction much faster and isn't used up.", s.foamy ? "Dish soap traps the oxygen in millions of bubbles: that's the foam." : "Without soap the oxygen escapes as bubbles. Add soap to trap it as foam.", "The foam feels warm: the reaction gives out heat (exothermic)."]}
+        <ResultCard title="A fountain of foam!" equation={ELEPHANT.equation} onNext={onNext} recap={E_STEPS}
+          why={["Hydrogen peroxide breaks down into water and oxygen gas.", "Yeast contains catalase, a catalyst: it makes the reaction much faster and isn't used up.", "Dish soap traps the oxygen in millions of bubbles: that's the foam.", "The foam feels warm: the reaction gives out heat (exothermic)."]}
           numbers={<>{Math.round(s.peroxideML)} mL of 6% H₂O₂ = {s.molH2O2.toFixed(3)} mol → ÷ 2 = <b className="text-lime">{s.molO2.toFixed(3)} mol O₂ ≈ {s.o2L.toFixed(2)} L</b>. More yeast makes it faster, not bigger: the amount of O₂ only depends on the peroxide.</>} />
       )}
     </>
@@ -194,29 +214,36 @@ export function CabbageScene() {
   );
 }
 
+const C_STEPS: Step[] = CABBAGE_CUPS.map((c, i) => ({
+  text: `Pour cabbage juice into the ${c.name}`, item: "cabbage", target: i,
+  why: `pH ${c.pH} → ${cabbageColor(c.pH).label} → ${pHKind(c.pH)}`,
+  done: (b) => (b.into.cabbage?.[i] ?? 0) >= 0.5,
+}));
+
 export function CabbageOverlay({ onNext }: { onNext: () => void }) {
   const into = useBench((s) => s.into.cabbage);
   useEffect(() => resetBench(), []);
+  const g = useGuide(C_STEPS);
   const pourCup = (i: number) => {
     if ((useBench.getState().into.cabbage?.[i] ?? 0) >= 0.7) return;
-    autoPour(C_ITEMS[0], i);
+    autoPour(C_ITEMS[0], i); // the guide's lock only lets the current cup pour
   };
   useExpKeys({ ...Object.fromEntries(CABBAGE_CUPS.map((_, i) => [String(i + 1), () => pourCup(i)])), r: resetBench });
   const filled = CABBAGE_CUPS.map((_, i) => (into?.[i] ?? 0) >= 0.5);
-  const all = filled.every(Boolean);
-  const show = useDelayedCard(all, 2000);
+  const show = useDelayedCard(g.finished, 1500);
   return (
     <>
-      <ExpHeader kicker="Experiment · red-cabbage rainbow" title="🌈 Pour red-cabbage juice into each cup. Which are acids, which are bases?"
-        chips={[{ ok: filled.some(Boolean), text: `${filled.filter(Boolean).length} of 6 cups tested`, tone: all ? "lime" : undefined }]}
-        hint={all ? null : "✊ Grab the jug · hold it over a cup · tilt to pour (or keys 1–6 / click a cup)"} />
+      <ExpHeader kicker="Experiment · red-cabbage rainbow" title="🌈 Test six liquids with red-cabbage juice. Which are acids, which are bases?"
+        chips={[{ ok: filled.some(Boolean), text: `${filled.filter(Boolean).length} of 6 cups tested`, tone: g.finished ? "lime" : undefined }]}
+        hint={stepHint(C_STEPS, g, "All six tested!")} />
+      <GuidePanel steps={C_STEPS} current={g.current} />
       <div className="pointer-events-none absolute inset-x-0 bottom-[3vh] z-20 flex justify-center gap-2 px-[4vw]">
         {CABBAGE_CUPS.map((c, i) => (
-          <CupCard key={c.id} i={i} name={c.name} pH={c.pH} tested={filled[i]} onPour={() => pourCup(i)} />
+          <CupCard key={c.id} i={i} name={c.name} pH={c.pH} tested={filled[i]} now={i === g.current} onPour={() => pourCup(i)} />
         ))}
       </div>
       {show && (
-        <ResultCard title="A pH rainbow!" onNext={onNext}
+        <ResultCard title="A pH rainbow!" onNext={onNext} recap={C_STEPS}
           why={["Red-cabbage juice contains anthocyanin, a natural indicator: its colour depends on how acidic the liquid is.", "Acids (low pH) turn it red-pink, neutral water keeps it violet, bases (high pH) turn it blue, green, then yellow.", "So the colour tells you the pH without a meter."]}
           numbers={<PHStrip />} />
       )}
@@ -224,19 +251,21 @@ export function CabbageOverlay({ onNext }: { onNext: () => void }) {
   );
 }
 
-function CupCard({ i, name, pH, tested, onPour }: { i: number; name: string; pH: number; tested: boolean; onPour: () => void }) {
+function CupCard({ i, name, pH, tested, now, onPour }: { i: number; name: string; pH: number; tested: boolean; now: boolean; onPour: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const id = `cup:${i}`;
-  const mouse = useTarget(id, ref, !tested);
+  const mouse = useTarget(id, ref, now && !tested);
   useEffect(() => subscribe("dwell", (e) => e.targetId === id && e.source !== "gesture" && onPour()), [id, onPour]);
   const c = cabbageColor(pH);
   return (
-    <div ref={ref} {...mouse} role="button" className={`pointer-events-auto w-[150px] cursor-pointer rounded-xl border bg-navy/85 px-2 py-2 text-center ${tested ? "border-lime/60" : "border-line"}`}>
+    <div ref={ref} {...mouse} role="button" className={`pointer-events-auto w-[150px] rounded-xl border bg-navy/85 px-2 py-2 text-center transition-all ${now && !tested ? "scale-105 cursor-pointer border-2 border-lime shadow-[0_0_18px_rgba(163,230,53,0.45)]" : tested ? "border-lime/60" : "cursor-not-allowed border-line opacity-45"}`}>
       <div className="text-sm">{name}</div>
       {tested ? (
         <div className="mt-1 text-xs"><span className="inline-block h-3 w-3 rounded-full align-middle" style={{ background: c.hex }} /> {c.label} · pH {pH} · <b>{pHKind(pH)}</b></div>
+      ) : now ? (
+        <div className="text-xs font-semibold text-lime">← do this now · key {i + 1}</div>
       ) : (
-        <div className="text-xs text-muted">{i + 1} · or click to test</div>
+        <div className="text-xs text-muted">🔒 later step</div>
       )}
     </div>
   );
@@ -276,8 +305,9 @@ export function LavaLampScene() {
   const blobs = useRef<(Mesh | null)[]>([]);
   const energy = useRef(0);
   const lastTablets = useRef(0);
+  const lavaFor = useRef(0);
   useEffect(() => {
-    energy.current = 0; lastTablets.current = 0;
+    energy.current = 0; lastTablets.current = 0; lavaFor.current = 0;
   }, [run]);
   const waterTop = 0.04 + (a.water ?? 0) * 0.45;
   const oilTop = waterTop + (a.oil ?? 0) * 0.8;
@@ -291,6 +321,10 @@ export function LavaLampScene() {
       lastTablets.current = tabs;
     }
     energy.current = Math.max(0, energy.current - dt * 0.08);
+    if (energy.current > 0.02 && (st.water ?? 0) > 0 && (st.oil ?? 0) > 0) {
+      lavaFor.current += dt;
+      if (lavaFor.current > 3.5) setFlag("lava"); // the blobs have risen and fallen at least once
+    }
     const wt = 0.04 + (st.water ?? 0) * 0.45, ot = wt + (st.oil ?? 0) * 0.8;
     blobs.current.forEach((m, i) => {
       if (!m) return;
@@ -328,25 +362,33 @@ export function LavaLampScene() {
   );
 }
 
+const L_STEPS: Step[] = [
+  { text: "Pour water into the bottle", item: "water", why: "Water: density 1.00 g/mL.", done: (b) => (b.amounts.water ?? 0) >= 0.95 },
+  { text: "Pour in the vegetable oil", item: "oil", why: `Oil (${LAVA_LAMP.oilDensity} g/mL) is less dense, so it floats on the water and doesn't mix.`, done: (b) => (b.amounts.oil ?? 0) >= 0.95 },
+  { text: "Add a few drops of colour", item: "colour", why: "The colour is water-based: it sinks through the oil into the water.", done: (b) => (b.amounts.colour ?? 0) >= 3 },
+  { text: "Drop in a fizzy tablet", item: "tablet", why: "Citric acid + sodium bicarbonate react and make CO₂ bubbles.", done: (b) => (b.amounts.tablet ?? 0) >= 1 },
+  { text: "Watch the blobs rise and fall", why: "Bubbles lift coloured water up; at the top the gas escapes and the blobs sink.", done: (b) => !!b.flags.lava },
+];
+
 export function LavaLampOverlay({ onNext }: { onNext: () => void }) {
   const a = useBench((s) => s.amounts);
   useEffect(() => resetBench(), []);
   useExpKeys(keysFor(L_ITEMS));
+  const g = useGuide(L_STEPS);
   const tabs = Math.round(a.tablet ?? 0);
   const t = lavaLampTablet(Math.max(1, tabs));
-  const going = tabs > 0 && (a.water ?? 0) > 0 && (a.oil ?? 0) > 0;
-  const show = useDelayedCard(going, 5000);
-  const hint = going ? null : (a.water ?? 0) === 0 ? "Pour water into the bottle." : (a.oil ?? 0) === 0 ? "Now the oil. Watch where it goes!" : (a.colour ?? 0) === 0 ? `Oil floats on water: it's less dense (${LAVA_LAMP.oilDensity} vs ${LAVA_LAMP.waterDensity} g/mL). Add a few drops of colour.` : "The colour sinks through the oil into the water. Drop in a fizzy tablet!";
+  const show = useDelayedCard(g.finished, 1200);
   return (
     <>
-      <ExpHeader kicker="Experiment · lava lamp" title="🫧 Make a lava lamp: water, oil, colour, then a fizzy tablet."
+      <ExpHeader kicker="Experiment · lava lamp" title="🫧 Make a lava lamp."
         chips={[{ ok: (a.water ?? 0) > 0, text: "Water" }, { ok: (a.oil ?? 0) > 0, text: "Oil" }, { ok: (a.colour ?? 0) > 0, text: `Colour ${Math.round(a.colour ?? 0)} drops` }, { ok: tabs > 0, text: `Tablets ${tabs}` }]}
-        hint={hint} />
+        hint={stepHint(L_STEPS, g, "Drop in another tablet to keep it going!")} />
+      <GuidePanel steps={L_STEPS} current={g.current} />
       <ItemLabels items={L_ITEMS} onPick={(it) => autoPour(it)} />
       {show && (
-        <ResultCard title="Blobs rise and fall like a lava lamp!" equation={LAVA_LAMP.equation} onNext={onNext}
-          why={[`Oil (${LAVA_LAMP.oilDensity} g/mL) is less dense than water (1.00 g/mL), so it floats, and they don't mix.`, "The colour is water-based, so it sinks through the oil into the water.", "The tablet's citric acid and sodium bicarbonate react and make CO₂ bubbles. They carry blobs of coloured water up; at the top the gas escapes and the blobs sink again.", "Drop in another tablet to restart it."]}
-          numbers={<>Each tablet: {LAVA_LAMP.tablet.citricG} g citric acid ({t.molCitric / Math.max(1, tabs) > 0 ? (t.molCitric / Math.max(1, tabs)).toFixed(4) : "0"} mol) + {LAVA_LAMP.tablet.sodaG} g NaHCO₃ ({(t.molSoda / Math.max(1, tabs)).toFixed(4)} mol). Ratio 1 : 3, so the {t.limiting} runs out first → <b className="text-lime">{(t.co2L / Math.max(1, tabs)).toFixed(2)} L of CO₂ per tablet</b>{tabs > 1 ? ` (${t.co2L.toFixed(2)} L in total)` : ""}.</>} />
+        <ResultCard title="Blobs rise and fall like a lava lamp!" equation={LAVA_LAMP.equation} onNext={onNext} recap={L_STEPS}
+          why={[`Oil (${LAVA_LAMP.oilDensity} g/mL) is less dense than water (1.00 g/mL), so it floats, and they don't mix.`, "The colour is water-based, so it sinks through the oil into the water.", "The tablet's citric acid and sodium bicarbonate react and make CO₂ bubbles. They carry blobs of coloured water up; at the top the gas escapes and the blobs sink again."]}
+          numbers={<>Each tablet: {LAVA_LAMP.tablet.citricG} g citric acid ({(t.molCitric / Math.max(1, tabs)).toFixed(4)} mol) + {LAVA_LAMP.tablet.sodaG} g NaHCO₃ ({(t.molSoda / Math.max(1, tabs)).toFixed(4)} mol). Ratio 1 : 3, so the {t.limiting} runs out first → <b className="text-lime">{(t.co2L / Math.max(1, tabs)).toFixed(2)} L of CO₂ per tablet</b>{tabs > 1 ? ` (${t.co2L.toFixed(2)} L in total)` : ""}.</>} />
       )}
     </>
   );
@@ -384,6 +426,7 @@ export function PacksScene() {
     P_X.forEach((_, i) => {
       const want = beakerTemp(st, i);
       shown.current[i] += (want - shown.current[i]) * Math.min(1, dt * 0.8);
+      if (Math.abs(want - PACKS.startC) > 0.5 && Math.abs(want - shown.current[i]) < 0.3) setFlag(want > PACKS.startC ? "hotDone" : "coldDone");
       const T = shown.current[i];
       const col = columns.current[i];
       if (col) {
@@ -425,24 +468,32 @@ export function PacksScene() {
   );
 }
 
+const P_STEPS: Step[] = [
+  { text: "Tip calcium chloride into beaker A", item: "CaCl2", target: 0, why: "CaCl₂ dissolves in the water.", done: (b) => (b.into.CaCl2?.[0] ?? 0) >= 0.95 },
+  { text: "Watch thermometer A", why: "It warms up: dissolving CaCl₂ gives out heat (exothermic).", done: (b) => !!b.flags.hotDone },
+  { text: "Tip ammonium nitrate into beaker B", item: "NH4NO3", target: 1, why: "NH₄NO₃ dissolves in the water.", done: (b) => (b.into.NH4NO3?.[1] ?? 0) >= 0.95 },
+  { text: "Watch thermometer B", why: "It cools down: dissolving NH₄NO₃ takes in heat (endothermic).", done: (b) => !!b.flags.coldDone },
+];
+
 export function PacksOverlay({ onNext }: { onNext: () => void }) {
   const into = useBench((s) => s.into);
   useEffect(() => resetBench(), []);
   useExpKeys(keysFor(P_ITEMS));
+  const g = useGuide(P_STEPS);
   const T = P_X.map((_, i) => beakerTemp(into, i));
-  const any = T.some((t) => Math.abs(t - PACKS.startC) > 0.05);
-  const show = useDelayedCard(any, 4000);
+  const show = useDelayedCard(g.finished, 1200);
   const exact = (salt: "CaCl2" | "NH4NO3") => ((into[salt]?.[0] ?? 0) + (into[salt]?.[1] ?? 0)) * SALTS[salt].gramsPerScoop;
   const a = (salt: "CaCl2" | "NH4NO3") => Math.round(exact(salt));
   const hot = packTemperature("CaCl2", Math.max(0.01, exact("CaCl2"))), cold = packTemperature("NH4NO3", Math.max(0.01, exact("NH4NO3")));
   return (
     <>
-      <ExpHeader kicker="Experiment · hot & cold packs" title="🔥❄️ Dissolve each salt in water. Which one gets hot, which gets cold?"
+      <ExpHeader kicker="Experiment · hot & cold packs" title="🔥❄️ Dissolve two salts in water. Which one gets hot, which gets cold?"
         chips={[{ ok: T[0] !== PACKS.startC, text: `Beaker A ${PACKS.startC.toFixed(1)} → ${T[0].toFixed(1)} °C` }, { ok: T[1] !== PACKS.startC, text: `Beaker B ${PACKS.startC.toFixed(1)} → ${T[1].toFixed(1)} °C` }]}
-        hint={any ? (a("CaCl2") && a("NH4NO3") ? null : "Now try the other salt in the other beaker!") : "✊ Grab a salt jar · tilt it over a beaker of water (100 g, 20 °C)"} />
+        hint={stepHint(P_STEPS, g, "Done! Add a second scoop to go further.")} />
+      <GuidePanel steps={P_STEPS} current={g.current} />
       <ItemLabels items={P_ITEMS} onPick={(it) => autoPour(it)} />
       {show && (
-        <ResultCard title="One heats up, one cools down!" onNext={onNext}
+        <ResultCard title="One heats up, one cools down!" onNext={onNext} recap={P_STEPS}
           why={["Dissolving breaks the salt's bonds (takes energy) and the ions bond to water (gives energy).", "Calcium chloride gives out more than it takes: exothermic, the water heats up (instant hot packs).", "Ammonium nitrate takes in more than it gives: endothermic, the water cools down (instant cold packs).", "⚠️ In real life these salts need gloves and goggles. Virtual only."]}
           numbers={<>Code: q = n × ΔH, ΔT = q ÷ (mass × 4.18 J/g·°C). {a("CaCl2") > 0 && <>CaCl₂ {a("CaCl2")} g = {hot.n.toFixed(3)} mol × 81.3 kJ/mol → <b className="text-coral">{hot.dT >= 0 ? "+" : ""}{hot.dT.toFixed(1)} °C</b>. </>}{a("NH4NO3") > 0 && <>NH₄NO₃ {a("NH4NO3")} g = {cold.n.toFixed(3)} mol × 25.7 kJ/mol → <b className="text-cyan">{cold.dT.toFixed(1)} °C</b>.</>}</>} />
       )}
@@ -468,6 +519,7 @@ export function CopperScene() {
     const dt = Math.min(rawDt, 0.05);
     const inIt = (useBench.getState().amounts.nail ?? 0) >= 1;
     prog.current = inIt ? Math.min(1, prog.current + dt / 9) : 0;
+    if (prog.current >= 1) setFlag("copperDone");
     if (liquid.current) {
       const m = liquid.current.material as MeshStandardMaterial;
       m.color.set(mix("#1E6FE0", "#A8C9A2", prog.current));
@@ -492,21 +544,28 @@ export function CopperScene() {
   );
 }
 
+const N_STEPS: Step[] = [
+  { text: "Drop the iron nail into the copper sulfate", item: "nail", why: "Iron (Fe) is more reactive than copper (Cu).", done: (b) => (b.amounts.nail ?? 0) >= 1 },
+  { text: "Watch the nail and the colour (time-lapse)", why: "Copper coats the nail and the blue Cu²⁺ is used up; pale-green Fe²⁺ is left.", done: (b) => !!b.flags.copperDone },
+];
+
 export function CopperOverlay({ onNext }: { onNext: () => void }) {
   const a = useBench((s) => s.amounts);
   useEffect(() => resetBench(), []);
   useExpKeys(keysFor(N_ITEMS));
+  const g = useGuide(N_STEPS);
   const inIt = (a.nail ?? 0) >= 1;
-  const show = useDelayedCard(inIt, 9500);
+  const show = useDelayedCard(g.finished, 800);
   const c = copperNail();
   return (
     <>
-      <ExpHeader kicker="Experiment · copper-plated nail (time-lapse)" title="🪙 Drop an iron nail into blue copper sulfate. Watch the nail and the colour."
+      <ExpHeader kicker="Experiment · copper-plated nail (time-lapse)" title="🪙 Put an iron nail in blue copper sulfate."
         chips={[{ ok: inIt, text: inIt ? "Nail in · 1 hour shown in 9 s" : "Nail on the bench" }]}
-        hint={inIt ? null : "✊ Grab the nail · hold it over the beaker · tilt to drop it in (or key 1)"} />
+        hint={stepHint(N_STEPS, g, "Done!")} />
+      <GuidePanel steps={N_STEPS} current={g.current} />
       <ItemLabels items={N_ITEMS} onPick={(it) => autoPour(it)} />
       {show && (
-        <ResultCard title="The nail turns copper-coloured and the blue fades!" equation={COPPER.equation} onNext={onNext}
+        <ResultCard title="The nail turned copper-coloured and the blue faded!" equation={COPPER.equation} onNext={onNext} recap={N_STEPS}
           why={["Iron is more reactive than copper, so it gives its electrons to the copper ions.", "Copper metal comes out of the solution and coats the nail (and flakes to the bottom).", "Iron goes into the solution as iron(II) sulfate, which is pale green: the blue copper ions are used up.", "⚠️ Copper sulfate is harmful if swallowed. Virtual only."]}
           numbers={<>
             <div className="mb-1">Reactivity series: {REACTIVITY.map((m, i) => <span key={m} className={m === "Fe" ? "font-bold text-lime" : m === "Cu" ? "font-bold text-coral" : "text-muted"}>{m}{i < REACTIVITY.length - 1 ? " › " : ""}</span>)}</div>
