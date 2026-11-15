@@ -565,7 +565,7 @@ export function GuidePanel({ steps, current }: { steps: Step[]; current: number 
 }
 
 /** The explanation card with Again / Next. */
-export function ResultCard({ title, equation, why, numbers, onNext, recap }: { title: string; equation?: string; why: string[]; numbers?: ReactNode; onNext: () => void; recap?: Step[] }) {
+export function ResultCard({ title, equation, why, numbers, onNext, recap, nextLabel = "Experiments ▶" }: { title: string; equation?: string; why: string[]; numbers?: ReactNode; onNext: () => void; recap?: Step[]; nextLabel?: string }) {
   useEffect(() => {
     const offs = [
       subscribe("dwell", (e) => {
@@ -583,7 +583,7 @@ export function ResultCard({ title, equation, why, numbers, onNext, recap }: { t
         <div className="font-display text-xl text-lime">✓ {title}</div>
         <div className="grid grid-cols-2 gap-3">
           <Btn id="exp:again" title="↺ Again" sub="R · from step 1" />
-          <Btn id="exp:next" title="Experiments ▶" sub="✊ / Enter / both hands up" />
+          <Btn id="exp:next" title={nextLabel} sub="✊ / Enter / both hands up" />
         </div>
         {recap && (
           <div className="rounded-xl border border-cyan/30 bg-panel px-3 py-2">

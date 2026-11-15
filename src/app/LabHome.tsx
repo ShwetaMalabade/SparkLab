@@ -11,6 +11,7 @@ import { LESSONS, type Activity } from "@/game/lab/lessons";
 import { BuilderOverlay, BuilderScene } from "@/game/lab/MoleculeBuilder";
 import { PourOverlay, PourScene } from "@/game/lab/PourLab";
 import { ExperimentsOverlay, ExperimentsScene } from "@/game/lab/ExperimentsHub";
+import { TitrationOverlay, TitrationScene } from "@/game/lab/TitrationLab";
 import { subscribe, useGame } from "@/game/store";
 import { CameraView } from "@/motion/CameraView";
 import { DebugOverlay } from "@/motion/DebugOverlay";
@@ -93,7 +94,7 @@ function Lab() {
       {!inRoom && <LabWorld target={target} done={done} locked={[]} onArrive={onArrive} autoWalk={stage.s === "walking"} />}
       {inRoom && act && (
         <Arena accent="#E879F9" still room={stage.room}>
-          {act.kind === "build" ? <BuilderScene q={act.q} /> : act.kind === "pour" ? <PourScene x={act.x} /> : <ExperimentsScene />}
+          {act.kind === "build" ? <BuilderScene q={act.q} /> : act.kind === "pour" ? <PourScene x={act.x} /> : act.kind === "titration" ? <TitrationScene /> : <ExperimentsScene />}
         </Arena>
       )}
 
@@ -133,6 +134,8 @@ function Lab() {
             <BuilderOverlay key={act.q.id} q={act.q} index={stage.i} total={LESSONS[stage.room].activities.length} onNext={next} />
           ) : act.kind === "pour" ? (
             <PourOverlay key={act.x.id} x={act.x} onNext={next} />
+          ) : act.kind === "titration" ? (
+            <TitrationOverlay onNext={next} />
           ) : (
             <ExperimentsOverlay onLeave={next} />
           )}

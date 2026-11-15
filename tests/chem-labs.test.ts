@@ -7,6 +7,7 @@ import { isGas, molarMass, solveStoich } from "../src/lib/stoich";
 import { benchSupply, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, targetCounts } from "../src/game/molecules";
 import { VOLCANO, VOLCANO_MAX_MOL, volcanoState, balloonState, elephantState, CABBAGE_CUPS, cabbageColor, pHKind, LAVA_LAMP, lavaLampTablet, packTemperature, COPPER, copperNail, displaces, ELEPHANT } from "../src/game/experiments";
 import { isBalanced } from "../src/lib/chem";
+import { dripRate, flaskAt, stopWindow, titrationChoices, TITRATION_DEMO } from "../src/game/titration";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra: unknown = "") => {
@@ -259,6 +260,21 @@ ok("lead reaction with no hazard → code adds 'Lead compounds are toxic', quest
   const c = copperNail();
   ok("copper: 0.050 mol Cu²⁺ limits (iron in excess) → 3.18 g Cu", c.limiting === "copper sulfate" && near(c.cuG, 3.177, 0.005), c);
   ok("reactivity: Fe displaces Cu, Cu doesn't displace Fe", displaces("Fe", "Cu") && !displaces("Cu", "Fe") && displaces("Zn", "Fe"));
+}
+
+// ---- Titration Lab (chemistry-plan/03 §7 paper-checked table, §2.2 windows, §2.3 choices)
+{
+  const table: [number, number, string][] = [[0, 1.0, "colorless"], [12, 2.57, "colorless"], [12.4, 3.27, "colorless"], [12.5, 7.0, "colorless"], [12.55, 10.43, "pink"], [13, 11.42, "pink"], [25, 12.7, "deep magenta"]];
+  for (const [ml, pH, label] of table) {
+    const f = flaskAt(ml);
+    ok(`titration ${ml} mL → pH ${pH.toFixed(2)}, ${label}`, near(f.pH, pH, 0.005) && (label === "pink" ? f.label === "pink" || f.label === "deep magenta" : f.label === label), [f.pH, f.label]);
+  }
+  ok("equivalence 12.50 mL by code", near(equivalenceML(TITRATION_DEMO), 12.5, 1e-9));
+  ok("stop windows: 12.45 early · 12.50/12.70 endpoint · 13.00 overshot", stopWindow(12.45) === "too_early" && stopWindow(12.5) === "endpoint" && stopWindow(12.7) === "endpoint" && stopWindow(13) === "overshot" && stopWindow(25) === "overshot");
+  const ch = titrationChoices();
+  ok("choices: A 25.00 mL · B 12.50 mL (correct) · C 50.00 mL · D 12.50 L", ch.map((c) => c.text).join("|") === "25.00 mL|12.50 mL|50.00 mL|12.50 L" && ch.filter((c) => c.correct).map((c) => c.id).join() === "B", ch.map((c) => c.text));
+  ok("mistake tags as in the plan", ch[0].tag === "used_volumes_not_moles" && ch[2].tag === "swapped_molarities" && ch[3].tag === "forgot_ml_to_l");
+  ok("stopcock: closed below 0.10; wide open 2.05 mL/s → 12.50 mL in about 6 s", dripRate(0.05) === 0 && near(12.5 / dripRate(1), 6.1, 0.1));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

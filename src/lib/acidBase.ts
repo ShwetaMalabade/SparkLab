@@ -105,7 +105,7 @@ export function curve(s: Scenario, points = 120): CurvePoint[] {
 
 // Indicator colors: [acid color, base color] across the transition range.
 export const INDICATORS: Record<Indicator, { name: string; low: number; high: number; acid: string; base: string; acidLabel: string; baseLabel: string }> = {
-  phenolphthalein: { name: "phenolphthalein", low: 8.2, high: 10.0, acid: "#F8FAFC", base: "#E0218A", acidLabel: "colorless", baseLabel: "pink" },
+  phenolphthalein: { name: "phenolphthalein", low: 8.2, high: 10.0, acid: "#F8FAFC", base: "#E75480", acidLabel: "colorless", baseLabel: "pink" }, // chemistry-plan/03 §3
   methyl_orange: { name: "methyl orange", low: 3.1, high: 4.4, acid: "#E53935", base: "#FBC02D", acidLabel: "red", baseLabel: "yellow" },
   bromothymol_blue: { name: "bromothymol blue", low: 6.0, high: 7.6, acid: "#FDD835", base: "#1E63D6", acidLabel: "yellow", baseLabel: "blue" },
 };
@@ -124,7 +124,7 @@ export function indicatorColor(ind: Indicator, pH: number): { hex: string; stren
   // Phenolphthalein: clear → pink; above its range it deepens to magenta (an overshoot the student can see).
   if (ind === "phenolphthalein") {
     const deep = Math.max(0, Math.min(1, (pH - I.high) / 2.5));
-    return { hex: deep > 0 ? mix(I.base, "#9D0A63", deep) : mix(I.acid, I.base, t), strength: Math.min(1, t * 0.85 + deep * 0.15), label: deep > 0.3 ? "deep magenta" : label };
+    return { hex: deep > 0 ? mix(I.base, "#C2185B", deep) : mix(I.acid, I.base, t), strength: Math.min(1, t * 0.85 + deep * 0.15), label: deep > 0.3 ? "deep magenta" : label };
   }
   return { hex: mix(I.acid, I.base, t), strength: 0.75, label };
 }
