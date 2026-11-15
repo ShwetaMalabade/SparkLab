@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { LESSONS, type Activity } from "@/game/lab/lessons";
 import { BuilderOverlay, BuilderScene } from "@/game/lab/MoleculeBuilder";
 import { PourOverlay, PourScene } from "@/game/lab/PourLab";
-import { VolcanoOverlay, VolcanoScene } from "@/game/lab/VolcanoLab";
+import { ExperimentsOverlay, ExperimentsScene } from "@/game/lab/ExperimentsHub";
 import { subscribe, useGame } from "@/game/store";
 import { CameraView } from "@/motion/CameraView";
 import { DebugOverlay } from "@/motion/DebugOverlay";
@@ -93,7 +93,7 @@ function Lab() {
       {!inRoom && <LabWorld target={target} done={done} locked={[]} onArrive={onArrive} autoWalk={stage.s === "walking"} />}
       {inRoom && act && (
         <Arena accent="#E879F9" still room={stage.room}>
-          {act.kind === "build" ? <BuilderScene q={act.q} /> : act.kind === "pour" ? <PourScene x={act.x} /> : <VolcanoScene />}
+          {act.kind === "build" ? <BuilderScene q={act.q} /> : act.kind === "pour" ? <PourScene x={act.x} /> : <ExperimentsScene />}
         </Arena>
       )}
 
@@ -134,7 +134,7 @@ function Lab() {
           ) : act.kind === "pour" ? (
             <PourOverlay key={act.x.id} x={act.x} onNext={next} />
           ) : (
-            <VolcanoOverlay onNext={next} />
+            <ExperimentsOverlay onLeave={next} />
           )}
         </>
       )}

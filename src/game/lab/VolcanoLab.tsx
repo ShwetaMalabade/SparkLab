@@ -460,7 +460,7 @@ export function VolcanoScene() {
       <group ref={(el) => void (items.current.soda = el)} position={HOME.soda.toArray()}>
         <mesh position={[0, 0.22, 0]}>
           <cylinderGeometry args={[0.26, 0.26, 0.44, 28, 1, true]} />
-          <meshStandardMaterial color="#E0F2FE" transparent opacity={0.35} roughness={0.05} side={2} />
+          <meshStandardMaterial color="#E0F2FE" transparent opacity={0.35} roughness={0.05} side={2} depthWrite={false} />
         </mesh>
         <mesh position={[0, 0.13, 0]}>
           <cylinderGeometry args={[0.24, 0.24, 0.24, 28]} />
@@ -486,7 +486,7 @@ export function VolcanoScene() {
       <group ref={(el) => void (items.current.vinegar = el)} position={HOME.vinegar.toArray()}>
         <mesh position={[0, 0.3, 0]}>
           <cylinderGeometry args={[0.2, 0.2, 0.6, 28, 1, true]} />
-          <meshStandardMaterial color="#E0F2FE" transparent opacity={0.3} roughness={0.05} side={2} />
+          <meshStandardMaterial color="#E0F2FE" transparent opacity={0.3} roughness={0.05} side={2} depthWrite={false} />
         </mesh>
         <mesh position={[0, 0.25, 0]}>
           <cylinderGeometry args={[0.185, 0.185, 0.48, 28]} />
@@ -494,7 +494,7 @@ export function VolcanoScene() {
         </mesh>
         <mesh position={[0, 0.7, 0]}>
           <cylinderGeometry args={[0.06, 0.12, 0.22, 20]} />
-          <meshStandardMaterial color="#E0F2FE" transparent opacity={0.4} />
+          <meshStandardMaterial color="#E0F2FE" transparent opacity={0.4} depthWrite={false} />
         </mesh>
         <mesh position={[0, 0.3, 0.205]}>
           <planeGeometry args={[0.28, 0.18]} />

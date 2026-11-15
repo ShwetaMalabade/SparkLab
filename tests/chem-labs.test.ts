@@ -5,7 +5,7 @@ import { assemble } from "../src/lib/assemble";
 import { LenientReadOut } from "../src/lib/agents/reader";
 import { isGas, molarMass, solveStoich } from "../src/lib/stoich";
 import { benchSupply, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, targetCounts } from "../src/game/molecules";
-import { VOLCANO, VOLCANO_MAX_MOL, volcanoState } from "../src/game/experiments";
+import { VOLCANO, VOLCANO_MAX_MOL, volcanoState, balloonState, elephantState, CABBAGE_CUPS, cabbageColor, pHKind, LAVA_LAMP, lavaLampTablet, packTemperature, COPPER, copperNail, displaces, ELEPHANT } from "../src/game/experiments";
 import { isBalanced } from "../src/lib/chem";
 
 let pass = 0, fail = 0;
@@ -235,6 +235,30 @@ ok("lead reaction with no hazard → code adds 'Lead compounds are toxic', quest
   const st2 = solveStoich({ equation: VOLCANO.equation, known: { formula: "NaHCO3", massG: little.sodaG }, target: { formula: "CO2" }, ask: "gas_volume_ml", gasMolarVolumeL: 24.0 });
   ok("same CO2 as the general stoichiometry solver", st2.ok && near(st2.r.answer / 1000, little.co2L, 1e-9), st2.ok && st2.r.answer);
   ok("pour fractions are clamped", volcanoState(5, -1).sodaG === VOLCANO.sodaJarG && volcanoState(5, -1).vinegarML === 0);
+}
+
+// ---- Experiments Lab: the other six experiments
+{
+  for (const e of [ELEPHANT.equation, LAVA_LAMP.equation, COPPER.equation]) ok(`balanced: ${e}`, isBalanced(e).balanced && isBalanced(e).minimal);
+  const b = balloonState(1, 1);
+  ok("balloon: 15 g soda + 200 mL vinegar → vinegar limits, 4.00 L CO2, ~20 cm across", b.limiting === "vinegar" && near(b.co2L, 4.0, 0.01) && near(b.radiusCm * 2, 19.7, 0.3), b);
+  ok("balloon: nothing tipped in → no gas", balloonState(0, 1).co2L === 0);
+  const e = elephantState(1, 0.5, 1);
+  ok("elephant: 100 mL 6% H2O2 = 0.176 mol → 0.088 mol O2 = 2.12 L", near(e.molH2O2, 0.1764, 1e-4) && near(e.o2L, 2.117, 0.005), e);
+  ok("elephant: more yeast is faster, never more oxygen", elephantState(1, 1, 1).speed > elephantState(1, 0.2, 1).speed && elephantState(1, 1, 1).o2L === elephantState(1, 0.2, 1).o2L);
+  ok("elephant: no yeast → no reaction; no soap → not foamy", !elephantState(1, 0, 1).reacting && !elephantState(1, 1, 0).foamy);
+  ok("cabbage: acids are red/pink, water violet, bases blue → green → yellow", cabbageColor(2.2).label === "pink" && cabbageColor(7).label === "violet" && cabbageColor(8.3).label === "blue" && cabbageColor(10).label === "green" && cabbageColor(12.5).label === "yellow");
+  ok("cabbage: cups sorted acid → base, kinds right", CABBAGE_CUPS.every((c, i) => i === 0 || c.pH > CABBAGE_CUPS[i - 1].pH) && pHKind(2.9) === "acid" && pHKind(7) === "neutral" && pHKind(11.6) === "base");
+  const t = lavaLampTablet(1);
+  ok("lava lamp: 1 g citric acid (×3) limits over 1.976 g NaHCO3 → 0.0156 mol CO2 = 0.375 L", t.limiting === "citric acid" && near(t.molCO2, 0.01561, 1e-4) && near(t.co2L, 0.375, 0.002), t);
+  ok("lava lamp: two tablets → twice the gas", near(lavaLampTablet(2).co2L, 2 * t.co2L, 1e-9));
+  const hot = packTemperature("CaCl2", 10), cold = packTemperature("NH4NO3", 10);
+  ok("CaCl2 10 g in 100 g water: exothermic, +15.9 °C", hot.kind === "exothermic" && near(hot.dT, 15.93, 0.05), hot);
+  ok("NH4NO3 10 g in 100 g water: endothermic, −7.0 °C", cold.kind === "endothermic" && near(cold.dT, -6.98, 0.05), cold);
+  ok("no salt → no change", packTemperature("CaCl2", 0).dT === 0);
+  const c = copperNail();
+  ok("copper: 0.050 mol Cu²⁺ limits (iron in excess) → 3.18 g Cu", c.limiting === "copper sulfate" && near(c.cuG, 3.177, 0.005), c);
+  ok("reactivity: Fe displaces Cu, Cu doesn't displace Fe", displaces("Fe", "Cu") && !displaces("Cu", "Fe") && displaces("Zn", "Fe"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

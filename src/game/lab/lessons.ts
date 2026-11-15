@@ -20,7 +20,7 @@ export type PourExperiment = {
   };
 };
 
-export type Activity = { kind: "build"; q: MoleculeQuestion } | { kind: "pour"; x: PourExperiment } | { kind: "volcano" };
+export type Activity = { kind: "build"; q: MoleculeQuestion } | { kind: "pour"; x: PourExperiment } | { kind: "experiments" };
 
 export const POURS: Record<string, PourExperiment> = {
   pbi2: {
@@ -66,6 +66,7 @@ export const LESSONS: Record<RoomId, { title: string; activities: Activity[] }> 
   balance: { title: "Organic Chemistry", activities: ORGANIC_QUESTIONS.map((q) => ({ kind: "build", q })) },
   mix: { title: "Inorganic Chemistry", activities: [...INORGANIC_BUILD.map((q) => ({ kind: "build" as const, q })), { kind: "pour", x: POURS.pbi2 }] },
   titration: { title: "Acids & Bases", activities: [{ kind: "pour", x: POURS.neutralize }, { kind: "pour", x: POURS.fizz }] },
-  // Experiments Lab (was the empty "Physical Chemistry, coming soon" room): free-play experiments, chemistry by code.
-  study: { title: "Experiments Lab", activities: [{ kind: "volcano" }] },
+  // Experiments Lab (was the empty "Physical Chemistry, coming soon" room): a menu of hands-on experiments
+  // (ExperimentsHub), chemistry computed by code in src/game/experiments.ts.
+  study: { title: "Experiments Lab", activities: [{ kind: "experiments" }] },
 };
