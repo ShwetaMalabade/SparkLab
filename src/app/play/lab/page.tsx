@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { LESSONS, type Activity } from "@/game/lab/lessons";
 import { BuilderOverlay, BuilderScene } from "@/game/lab/MoleculeBuilder";
 import { PourOverlay, PourScene } from "@/game/lab/PourLab";
+import { VolcanoOverlay, VolcanoScene } from "@/game/lab/VolcanoLab";
 import { subscribe, useGame } from "@/game/store";
 import { CameraView } from "@/motion/CameraView";
 import { DebugOverlay } from "@/motion/DebugOverlay";
@@ -24,7 +25,7 @@ const SUBJECTS: { room: RoomId; icon: string; soon?: boolean }[] = [
   { room: "balance", icon: "🧬" },
   { room: "mix", icon: "🧪" },
   { room: "titration", icon: "⚗️" },
-  { room: "study", icon: "📈", soon: true },
+  { room: "study", icon: "🌋" },
 ];
 
 type Stage = { s: "choose" } | { s: "walking"; room: RoomId } | { s: "ready"; room: RoomId } | { s: "activity"; room: RoomId; i: number };
@@ -89,10 +90,10 @@ function Lab() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#1A1530]">
-      {!inRoom && <LabWorld target={target} done={done} locked={["study"]} onArrive={onArrive} autoWalk={stage.s === "walking"} />}
+      {!inRoom && <LabWorld target={target} done={done} locked={[]} onArrive={onArrive} autoWalk={stage.s === "walking"} />}
       {inRoom && act && (
         <Arena accent="#E879F9" still room={stage.room}>
-          {act.kind === "build" ? <BuilderScene q={act.q} /> : <PourScene x={act.x} />}
+          {act.kind === "build" ? <BuilderScene q={act.q} /> : act.kind === "pour" ? <PourScene x={act.x} /> : <VolcanoScene />}
         </Arena>
       )}
 
@@ -130,8 +131,10 @@ function Lab() {
           </div>
           {act.kind === "build" ? (
             <BuilderOverlay key={act.q.id} q={act.q} index={stage.i} total={LESSONS[stage.room].activities.length} onNext={next} />
-          ) : (
+          ) : act.kind === "pour" ? (
             <PourOverlay key={act.x.id} x={act.x} onNext={next} />
+          ) : (
+            <VolcanoOverlay onNext={next} />
           )}
         </>
       )}

@@ -5,6 +5,8 @@ import { assemble } from "../src/lib/assemble";
 import { LenientReadOut } from "../src/lib/agents/reader";
 import { isGas, molarMass, solveStoich } from "../src/lib/stoich";
 import { benchSupply, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, targetCounts } from "../src/game/molecules";
+import { VOLCANO, VOLCANO_MAX_MOL, volcanoState } from "../src/game/experiments";
+import { isBalanced } from "../src/lib/chem";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra: unknown = "") => {
@@ -218,6 +220,21 @@ ok("lead reaction with no hazard → code adds 'Lead compounds are toxic', quest
   const short = allQs.filter((q) => Object.entries(targetCounts(q.formula)).some(([el, n]) => count(benchSupply(q), el) < n + 1));
   ok("every molecule can be built by hand with one spare of each needed atom", short.length === 0, short.map((q) => q.formula));
   ok("decoy elements: 2 each", count(benchSupply(methane), "O") === 2 && count(benchSupply(methane), "N") === 2);
+}
+
+// ---- Experiments Lab: baking-soda volcano (experiments.ts)
+{
+  ok("volcano equation is balanced", isBalanced(VOLCANO.equation).balanced && isBalanced(VOLCANO.equation).minimal);
+  const none = volcanoState(0, 0), sodaOnly = volcanoState(0.5, 0), vinOnly = volcanoState(0, 0.5);
+  ok("nothing / soda only / vinegar only → no CO2, no limiting reactant yet", none.co2L === 0 && sodaOnly.co2L === 0 && vinOnly.co2L === 0 && sodaOnly.limiting === null);
+  const full = volcanoState(1, 1);
+  ok("whole jar (20 g, 0.238 mol) + whole bottle (250 mL, 0.208 mol) → vinegar limits", full.limiting === "vinegar" && near(full.molSoda, 0.2381, 1e-3) && near(full.molAcid, 0.2083, 1e-3), full);
+  ok("→ 0.208 mol CO2 = 5.00 L at 24.0 L/mol", near(full.co2L, 5.0, 0.01) && near(VOLCANO_MAX_MOL, full.reacted, 1e-12), full.co2L);
+  const little = volcanoState(0.25, 1);
+  ok("a quarter jar of soda → soda limits, 1.43 L", little.limiting === "baking soda" && near(little.co2L, 1.43, 0.01), little);
+  const st2 = solveStoich({ equation: VOLCANO.equation, known: { formula: "NaHCO3", massG: little.sodaG }, target: { formula: "CO2" }, ask: "gas_volume_ml", gasMolarVolumeL: 24.0 });
+  ok("same CO2 as the general stoichiometry solver", st2.ok && near(st2.r.answer / 1000, little.co2L, 1e-9), st2.ok && st2.r.answer);
+  ok("pour fractions are clamped", volcanoState(5, -1).sodaG === VOLCANO.sodaJarG && volcanoState(5, -1).vinegarML === 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

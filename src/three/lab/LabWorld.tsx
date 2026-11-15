@@ -26,7 +26,7 @@ export const ROOMS: Room[] = [
   { id: "mix", name: "Inorganic Chemistry", sub: "water · salts · reactions", accent: "#E879F9", tile: ["#E4DAF0", "#B9A8D3"], x0: -10, x1: -1.2, z0: -8, z1: -1.2, doorX: -5.6, doorZ: -1.2 },
   { id: "titration", name: "Acids & Bases", sub: "pH · indicators · fizz", accent: "#F472B6", tile: ["#F3DCE6", "#D9A9BF"], x0: 1.2, x1: 10, z0: -8, z1: -1.2, doorX: 5.6, doorZ: -1.2 },
   { id: "balance", name: "Organic Chemistry", sub: "carbon molecules", accent: "#22D3EE", tile: ["#D6EBF1", "#9FC8D6"], x0: -10, x1: -1.2, z0: 1.2, z1: 8, doorX: -5.6, doorZ: 1.2 },
-  { id: "study", name: "Physical Chemistry", sub: "coming soon", accent: "#A3E635", tile: ["#E8EDD3", "#BFC99A"], x0: 1.2, x1: 10, z0: 1.2, z1: 8, doorX: 5.6, doorZ: 1.2 },
+  { id: "study", name: "Experiments Lab", sub: "volcano · fizz · foam", accent: "#A3E635", tile: ["#E8EDD3", "#BFC99A"], x0: 1.2, x1: 10, z0: 1.2, z1: 8, doorX: 5.6, doorZ: 1.2 },
 ];
 export const roomOf = (id: RoomId) => ROOMS.find((r) => r.id === id)!;
 const inside = (r: Rect, x: number, z: number) => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1;
