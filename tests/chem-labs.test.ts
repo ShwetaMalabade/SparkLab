@@ -4,6 +4,7 @@ import { COMPOUNDS, lookupCompound, mysteryDistractors, observe, observeAll } fr
 import { assemble } from "../src/lib/assemble";
 import { LenientReadOut } from "../src/lib/agents/reader";
 import { isGas, molarMass, solveStoich } from "../src/lib/stoich";
+import { benchSupply, MOLECULE_QUESTIONS, ORGANIC_QUESTIONS, targetCounts } from "../src/game/molecules";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, extra: unknown = "") => {
@@ -207,6 +208,17 @@ a = assemble({ ...base, id: "x1", topic: "reaction_prediction", concept: "precip
   { id: "x1", template: "mix_lab", templateReason: "r", params: {}, correctWhy: "c", misconceptions: [mis("a1"), mis("a2"), mis("a3")],
     wrong: [{ misconceptionId: "a1", wrongFormula: null, text: "Bubbles", why: "w" }, { misconceptionId: "a2", wrongFormula: null, text: "Nothing", why: "w" }, { misconceptionId: "a3", wrongFormula: null, text: "White solid", why: "w" }] } as never);
 ok("lead reaction with no hazard → code adds 'Lead compounds are toxic', question kept", a.question?.template === "mix_lab" && a.question.reaction?.hazard === "Lead compounds are toxic", a.errors);
+
+// ---- Molecule Builder bench supply (methane showed only 3 H for CH4)
+{
+  const count = (xs: string[], el: string) => xs.filter((x) => x === el).length;
+  const methane = ORGANIC_QUESTIONS.find((q) => q.formula === "CH4")!;
+  ok("methane bench: 5 H (4 + 1 spare), 2 C", count(benchSupply(methane), "H") === 5 && count(benchSupply(methane), "C") === 2, benchSupply(methane));
+  const allQs = [...ORGANIC_QUESTIONS, ...MOLECULE_QUESTIONS];
+  const short = allQs.filter((q) => Object.entries(targetCounts(q.formula)).some(([el, n]) => count(benchSupply(q), el) < n + 1));
+  ok("every molecule can be built by hand with one spare of each needed atom", short.length === 0, short.map((q) => q.formula));
+  ok("decoy elements: 2 each", count(benchSupply(methane), "O") === 2 && count(benchSupply(methane), "N") === 2);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

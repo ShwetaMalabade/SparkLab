@@ -13,7 +13,7 @@ import { useTarget } from "@/motion/targets";
 import type { Side } from "@/motion/types";
 import { Confetti } from "@/three/effects/Confetti";
 import { CPK } from "../ChemText";
-import { ELEMENT_NAME, mergePieces, moleculeLayout, pieceFormula, subscript, targetCounts, type Counts, type MoleculeQuestion } from "../molecules";
+import { benchSupply, ELEMENT_NAME, mergePieces, moleculeLayout, pieceFormula, subscript, targetCounts, type Counts, type MoleculeQuestion } from "../molecules";
 import { playSfx } from "../sfx";
 import { subscribe, useGame } from "../store";
 
@@ -40,7 +40,7 @@ function spawn(q: MoleculeQuestion) {
   PIECES.length = 0;
   SCREEN.clear();
   cooldown.clear();
-  const all = q.palette.flatMap((el) => [el, el, el]);
+  const all = benchSupply(q);
   all.forEach((el, i) => {
     const a = -Math.PI * 0.95 + (i / (all.length - 1)) * Math.PI * 0.9;
     PIECES.push({ id: nextId++, counts: { [el]: 1 }, pos: new Vector3(Math.cos(a) * 3.1, 1.25 + (i % 3) * 0.5, 1.2 + Math.sin(a) * 0.6), held: null, flashUntil: 0, phase: i * 0.7, bench: false });

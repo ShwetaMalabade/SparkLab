@@ -39,6 +39,14 @@ const plural = (n: number, el: string) => `${n} ${nm(el)}${n === 1 ? "" : "s"}`;
 export type Counts = Record<string, number>;
 export const targetCounts = (formula: string): Counts => parseFormula(formula);
 
+/** The atoms floating around the bench: every element the molecule needs, as many as it needs plus one spare (so
+ *  over-building is still a mistake you can make), and 2 of each tempting wrong element. Was a flat 3 of everything,
+ *  which left methane one hydrogen short (CH4 needs 4) and ethane three short. */
+export function benchSupply(q: MoleculeQuestion): string[] {
+  const target = targetCounts(q.formula);
+  return q.palette.flatMap((el) => Array.from({ length: target[el] ? target[el] + 1 : 2 }, () => el));
+}
+
 /** Join "H and O" / "C, H and O". */
 const list = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 
