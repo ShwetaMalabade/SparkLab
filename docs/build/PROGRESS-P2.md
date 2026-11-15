@@ -57,6 +57,7 @@ Statuses: ⬜ todo · 🟦 doing · ✅ done · ⛔ blocked · ✂️ cut
 - **Contracts frozen at 5407174.** `src/lib/client/{api,types}.ts` match CONTRACTS §2. Any later change is additive and listed here.
 
 ## Notes for the partner
+- **Titration Lab (chemistry-plan/03) is in:** first activity of the Acids & Bases room (`{ kind: "titration" }`, `src/game/lab/TitrationLab.tsx`, rules in `src/game/titration.ts`). Stopcock = power-hand height or W/S; Space = stop and read (handled in the lab, since `fire` stays disarmed).
 - **The lab is now the home page:** `/play/lab`'s page moved to `src/app/LabHome.tsx` and renders at `/`; `/play/lab` forwards to `/`. The old worksheet landing is no longer linked.
 - **Experiments Lab (`/play/lab`, room id `study`):** a picker of 7 experiments (`ExperimentsHub.tsx`): volcano, elephant toothpaste, red-cabbage rainbow, balloon, lava lamp, hot & cold packs, copper nail. Shared bench engine `src/game/lab/benchKit.tsx` (grab/hold/tilt to pour; keys + clicks); chemistry in `src/game/experiments.ts` (tested). Activity kind `{ kind: "experiments" }`.
 - **Molecule Builder fix (after your handoff):** the bench spawned 3 of every element, so CH4 / C2H6 couldn't be finished by hand. Supply now = what the molecule needs + 1 spare, decoys ×2 (`benchSupply` in `src/game/molecules.ts`, tested in `tests/chem-labs.test.ts`).
