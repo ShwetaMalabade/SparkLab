@@ -1,7 +1,8 @@
-// Landing (docs/plan/07 §2 screen 1, 06 §1): the class exists BEFORE the scan,
-// so the QR + code are already on screen when the judge picks up their phone.
-import { Landing } from "./_landing/Landing";
+// Home: the 3D chemistry lab building (subject rooms + the Experiments Lab). The earlier worksheet landing
+// (time budget, scan, last scan, teacher QR) is no longer linked; its code stays in ./_landing and /scan, /review,
+// /live, /results still work if opened directly.
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <Landing />;
+  redirect("/play/lab");
 }
